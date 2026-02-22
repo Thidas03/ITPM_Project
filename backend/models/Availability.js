@@ -13,11 +13,15 @@ const AvailabilitySchema = new mongoose.Schema({
     },
     startTime: {
         type: String,
-        required: true // e.g., '09:00'
+        required: true
     },
     endTime: {
         type: String,
-        required: true // e.g., '17:00'
+        required: true
+    },
+    isBooked: {
+        type: Boolean,
+        default: false
     },
     createdAt: {
         type: Date,
