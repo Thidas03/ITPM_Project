@@ -10,9 +10,9 @@ const getCurrentUser = () => {
     // In a real app, this comes from Context or Redux based on JWT
     // For demo purposes, we will mock a student user
     return {
-        _id: 'mock_student_123',
-        role: 'student',
-        name: 'Alex Student'
+        _id: '60d0fe4f5311236168a109ca', // Using a valid 24-character hex ObjectId
+        role: 'tutor',
+        name: 'Alex Tutor'
     };
 };
 

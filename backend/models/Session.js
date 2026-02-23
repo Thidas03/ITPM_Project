@@ -23,6 +23,14 @@ const SessionSchema = new mongoose.Schema({
         enum: ['available', 'booked', 'completed', 'cancelled'],
         default: 'available'
     },
+    maxParticipants: {
+        type: Number,
+        default: 1
+    },
+    currentParticipants: {
+        type: Number,
+        default: 0
+    },
     createdAt: {
         type: Date,
         default: Date.now
