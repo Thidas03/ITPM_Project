@@ -8,7 +8,8 @@ const SessionSchema = new mongoose.Schema({
     },
     date: {
         type: Date,
-        required: true
+        required: true,
+        expires: 86400 // 24 hours
     },
     startTime: {
         type: String,
@@ -30,6 +31,10 @@ const SessionSchema = new mongoose.Schema({
     currentParticipants: {
         type: Number,
         default: 0
+    },
+    meetingLink: {
+        type: String,
+        default: ''
     },
     createdAt: {
         type: Date,

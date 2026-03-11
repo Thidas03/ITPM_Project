@@ -1,8 +1,10 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
-import Dashboard from './pages/Dashboard';
 import 'react-toastify/dist/ReactToastify.css';
 import './index.css';
+import Dashboard from './pages/Dashboard';
+import TutorDashboard from './pages/TutorDashboard';
+import StudentDashboard from './pages/StudentDashboard';
 
 // Placeholder components
 const Home = () => (
@@ -13,9 +15,20 @@ const Home = () => (
     <p className="text-xl text-gray-400 mb-8 max-w-2xl text-center">
       The smart peer tutoring platform. Connect with peers, book sessions, and excel in your studies.
     </p>
-    <a href="/dashboard" className="bg-gradient-to-r from-teal-500 to-indigo-600 hover:from-teal-400 hover:to-indigo-500 text-white font-bold py-4 px-10 rounded-full shadow-2xl transition transform hover:-translate-y-1">
-      Enter Dashboard
-    </a>
+    <div className="flex gap-4">
+      <a
+        href="/dashboard/tutor"
+        className="bg-gradient-to-r from-teal-500 to-indigo-600 hover:from-teal-400 hover:to-indigo-500 text-white font-bold py-3 px-8 rounded-full shadow-2xl transition transform hover:-translate-y-1"
+      >
+        Tutor Dashboard
+      </a>
+      <a
+        href="/dashboard/student"
+        className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold py-3 px-8 rounded-full shadow-2xl transition transform hover:-translate-y-1"
+      >
+        Student Dashboard
+      </a>
+    </div>
   </div>
 );
 
@@ -28,7 +41,11 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
+          {/* Legacy combined dashboard (optional) */}
           <Route path="/dashboard" element={<Dashboard />} />
+          {/* Separate dashboards */}
+          <Route path="/dashboard/tutor" element={<TutorDashboard />} />
+          <Route path="/dashboard/student" element={<StudentDashboard />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <ToastContainer

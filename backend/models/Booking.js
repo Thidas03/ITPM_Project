@@ -1,24 +1,39 @@
 const mongoose = require('mongoose');
 
 const BookingSchema = new mongoose.Schema({
-    session: {
-        type: mongoose.Schema.ObjectId,
-        ref: 'Session',
-        required: true
-    },
     student: {
         type: mongoose.Schema.ObjectId,
         ref: 'User',
         required: true
     },
+    tutor: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    availability: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'Availability',
+        required: false
+    },
+    session: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'Session',
+        required: false
+    },
+    bookingDate: {
+        type: Date,
+        required: true,
+        expires: 86400 // 24 hours
+    },
     status: {
         type: String,
-        enum: ['confirmed', 'cancelled', 'completed'],
-        default: 'confirmed'
+        enum: ['upcoming', 'completed', 'cancelled'],
+        default: 'upcoming'
     },
-    notes: {
+    meetingLink: {
         type: String,
-        maxlength: 500
+        required: true
     },
     createdAt: {
         type: Date,

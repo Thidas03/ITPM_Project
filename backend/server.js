@@ -27,6 +27,14 @@ app.use('/api/availability', availabilityRoutes);
 const sessionRoutes = require('./routes/sessionRoutes');
 app.use('/api/sessions', sessionRoutes);
 
+// ✅ Import and mount booking routes
+const bookingRoutes = require('./routes/bookingRoutes');
+app.use('/api/bookings', bookingRoutes);
+
+// ✅ Import and mount notification routes
+const notificationRoutes = require('./routes/notificationRoutes');
+app.use('/api/notifications', notificationRoutes);
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {

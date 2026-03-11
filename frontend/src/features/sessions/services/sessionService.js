@@ -24,3 +24,13 @@ export const deleteSession = async (sessionId) => {
     const response = await api.delete(`/sessions/${sessionId}`);
     return response.data;
 };
+
+export const bookSession = async (sessionId) => {
+    const response = await api.put(`/sessions/${sessionId}/book`);
+    return response.data;
+};
+
+export const getSessionParticipants = async (sessionId) => {
+    const response = await api.get(`/sessions/${sessionId}/participants`);
+    return response.data;
+};

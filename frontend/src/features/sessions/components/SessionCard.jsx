@@ -2,14 +2,22 @@ import React, { useState } from 'react';
 
 const SessionCard = ({ session, onBook }) => {
     const [isHovered, setIsHovered] = useState(false);
-    const isAvailable = session.status === 'available' && session.currentParticipants < session.maxParticipants;
-    const isFullyBooked = session.status === 'booked' || session.currentParticipants >= session.maxParticipants;
+
+    const now = new Date();
+    const dateString = session.date.split('T')[0];
+    const sessionDateTime = new Date(`${dateString}T${session.startTime}`);
+
+    const isPast = sessionDateTime < now;
+    const isFull = session.currentParticipants >= session.maxParticipants;
+
+    const isAvailable = !isPast && !isFull;
+    const isFullyBooked = isFull;
 
     return (
         <div
             className={`relative p-6 rounded-2xl border transition-all duration-300 transform 
         ${isHovered && isAvailable ? '-translate-y-1 shadow-2xl border-teal-500' : 'border-gray-700 shadow-lg'}
-        ${isFullyBooked ? 'bg-gray-800/60 opacity-75' : 'bg-gray-800'}`}
+        ${isPast || isFull ? 'bg-gray-800/60 opacity-75' : 'bg-gray-800'}`}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
@@ -23,10 +31,13 @@ const SessionCard = ({ session, onBook }) => {
                     </p>
                 </div>
                 <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border 
-          ${isAvailable ? 'bg-teal-500/10 text-teal-400 border-teal-500/30' :
-                        isFullyBooked ? 'bg-red-500/10 text-red-400 border-red-500/30' :
-                            'bg-gray-600/20 text-gray-400 border-gray-600/30'}`}>
-                    {session.status}
+          ${isPast
+                        ? 'bg-gray-600/20 text-gray-400 border-gray-600/30'
+                        : isFull
+                            ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                            : 'bg-teal-500/10 text-teal-400 border-teal-500/30'}`}>
+
+                    {isPast ? 'expired' : isFull ? 'booked' : 'available'}
                 </div>
             </div>
 
@@ -48,15 +59,16 @@ const SessionCard = ({ session, onBook }) => {
             </div>
 
             <button
-                onClick={() => onBook(session)}
+                onClick={() => isAvailable && onBook(session)}
                 disabled={!isAvailable}
                 className={`w-full py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300
-          ${isAvailable
+        ${isAvailable
                         ? 'bg-gradient-to-r from-teal-500 to-indigo-600 text-white shadow-lg hover:shadow-teal-500/25 hover:from-teal-400 hover:to-indigo-500'
                         : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`}
             >
-                {isAvailable ? 'Book Session' : 'Unavailable'}
+                {isPast ? 'Expired' : isFull ? 'Full' : 'Book Session'}
             </button>
+
 
             {/* Decorative background element on hover */}
             {isHovered && isAvailable && (
@@ -65,5 +77,7 @@ const SessionCard = ({ session, onBook }) => {
         </div>
     );
 };
+
+
 
 export default SessionCard;
