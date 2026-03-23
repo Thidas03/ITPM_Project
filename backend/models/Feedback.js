@@ -1,38 +1,44 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const FeedbackSchema = new mongoose.Schema(
+const feedbackSchema = new mongoose.Schema(
   {
     sessionId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Session',
-      required: true,
+      type: String,
+      required: [true, "Session ID is required"],
+      trim: true,
     },
     studentId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
+      type: String,
+      required: [true, "Student ID is required"],
+      trim: true,
     },
     tutorId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
+      type: String,
+      required: [true, "Tutor ID is required"],
+      trim: true,
     },
     rating: {
       type: Number,
-      required: [true, 'Please add a rating'],
-      min: 1,
-      max: 5,
+      required: [true, "Rating is required"],
+      min: [1, "Rating must be at least 1"],
+      max: [5, "Rating cannot exceed 5"],
     },
-    reviewText: {
+    comment: {
+      type: String,
+      required: [true, "Comment is required"],
+      trim: true,
+      minlength: [5, "Comment must be at least 5 characters"],
+      maxlength: [500, "Comment cannot exceed 500 characters"],
+    },
+    category: {
       type: String,
       trim: true,
-      maxlength: 1000,
-      default: '',
+      default: "General",
     },
     status: {
       type: String,
-      enum: ['approved', 'hidden', 'flagged'],
-      default: 'approved',
+      enum: ["Pending", "Reviewed", "Resolved"],
+      default: "Pending",
     },
   },
   {
@@ -40,4 +46,4 @@ const FeedbackSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model('Feedback', FeedbackSchema);
+module.exports = mongoose.model("Feedback", feedbackSchema);
