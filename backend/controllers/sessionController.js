@@ -25,6 +25,19 @@ exports.createSession = async (req, res) => {
             });
         }
 
+        if (targetDate.getTime() === today.getTime()) {
+            const now = new Date();
+            const currentHours = now.getHours().toString().padStart(2, '0');
+            const currentMinutes = now.getMinutes().toString().padStart(2, '0');
+            const currentTimeStr = `${currentHours}:${currentMinutes}`;
+            if (startTime < currentTimeStr) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Session start time cannot be in the past today'
+                });
+            }
+        }
+
         const session = await Session.create({
             tutor,
             date,
@@ -108,6 +121,19 @@ exports.updateSession = async (req, res) => {
                     success: false,
                     message: 'Session date cannot be in the past'
                 });
+            }
+
+            if (targetDate.getTime() === today.getTime() && startTime) {
+                const now = new Date();
+                const currentHours = now.getHours().toString().padStart(2, '0');
+                const currentMinutes = now.getMinutes().toString().padStart(2, '0');
+                const currentTimeStr = `${currentHours}:${currentMinutes}`;
+                if (startTime < currentTimeStr) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Session start time cannot be in the past today'
+                    });
+                }
             }
         }
 
@@ -224,6 +250,64 @@ exports.getSessionParticipants = async (req, res) => {
             success: true,
             count: bookings.length,
             data: bookings
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// CANCEL SESSION (Tutor cancels the entire session)
+exports.cancelSession = async (req, res) => {
+    try {
+        const session = await Session.findById(req.params.sessionId);
+
+        if (!session) {
+            return res.status(404).json({ success: false, message: 'Session not found' });
+        }
+
+        const today = new Date();
+        const sessionDate = new Date(session.date);
+
+        if (sessionDate.getTime() < today.setHours(0, 0, 0, 0) || session.status === 'completed') {
+            return res.status(400).json({ success: false, message: 'Cannot cancel a past or completed session' });
+        }
+
+        if (session.status === 'cancelled') {
+            return res.status(400).json({ success: false, message: 'Session is already cancelled' });
+        }
+
+        session.status = 'cancelled';
+        await session.save();
+
+        // Find all bookings for this session and cancel them
+        const bookings = await Booking.find({ session: session._id, status: { $ne: 'cancelled' } });
+
+        for (const booking of bookings) {
+            booking.status = 'cancelled';
+            await booking.save();
+
+            // Notify students
+            const Notification = require('../models/Notification');
+            try {
+                await Notification.create({
+                    recipient: booking.student,
+                    message: `Your session on ${new Date(session.date).toLocaleDateString()} at ${session.startTime} has been cancelled by the tutor.`,
+                    relatedBooking: booking._id,
+                    type: 'system'
+                });
+                console.log(`Notified student ${booking.student} about session cancellation.`);
+            } catch (err) {
+                console.error('Failed to notify student:', err.message);
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Session cancelled successfully',
+            data: session
         });
     } catch (error) {
         res.status(400).json({

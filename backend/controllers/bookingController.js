@@ -277,6 +277,23 @@ exports.cancelBooking = async (req, res) => {
         booking.status = 'cancelled';
         await booking.save();
 
+        // Create cancellation notification for the tutor
+        try {
+            const studentUser = await User.findById(booking.student);
+            const studentName = studentUser ? studentUser.name : 'A student';
+            const bookingDateStr = new Date(booking.bookingDate).toLocaleDateString();
+
+            await Notification.create({
+                recipient: booking.tutor,
+                message: `${studentName} cancelled their booking for ${bookingDateStr}.`,
+                relatedBooking: booking._id,
+                type: 'booking'
+            });
+            console.log('Cancellation Notification Created for Tutor:', booking.tutor);
+        } catch (notificationError) {
+            console.error('FAILED TO CREATE CANCELLATION NOTIFICATION:', notificationError.message);
+        }
+
         // Free the availability slot logic removed to support recurring weekly bookings
 
         // Or adjust session participation if this booking was for a session

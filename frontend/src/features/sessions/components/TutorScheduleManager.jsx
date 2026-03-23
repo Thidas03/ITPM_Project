@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-import { getTutorSessions, createSession, updateSession, deleteSession, getSessionParticipants } from '../services/sessionService';
+import { getTutorSessions, createSession, updateSession, deleteSession, getSessionParticipants, cancelSession } from '../services/sessionService';
 import { toast } from 'react-toastify';
 import AvailabilityManager from './AvailabilityManager';
 import { FaUsers, FaLink, FaCalendarAlt, FaClock, FaCheckCircle, FaExclamationCircle, FaHistory } from 'react-icons/fa';
+import ConfirmationModal from '../../common/components/ConfirmationModal';
 
 const TutorScheduleManager = ({ tutorId }) => {
     const [activeTab, setActiveTab] = useState('sessions');
@@ -22,6 +23,11 @@ const TutorScheduleManager = ({ tutorId }) => {
     const [sessionParticipants, setSessionParticipants] = useState([]);
     const [selectedSession, setSelectedSession] = useState(null);
     const [loadingParticipants, setLoadingParticipants] = useState(false);
+    
+    // Cancel session state
+    const [cancelSessionId, setCancelSessionId] = useState(null);
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+    const [cancelingSession, setCancelingSession] = useState(false);
 
     const isPastDate = (selectedDate) => {
         const today = new Date();
@@ -56,8 +62,36 @@ const TutorScheduleManager = ({ tutorId }) => {
             return toast.warning('You cannot create session slots in the past');
         }
 
+        const now = new Date();
+        const targetDate = new Date(date);
+        if (
+            targetDate.getFullYear() === now.getFullYear() &&
+            targetDate.getMonth() === now.getMonth() &&
+            targetDate.getDate() === now.getDate()
+        ) {
+            const currentHours = now.getHours().toString().padStart(2, '0');
+            const currentMinutes = now.getMinutes().toString().padStart(2, '0');
+            const currentTimeStr = `${currentHours}:${currentMinutes}`;
+            if (startTime < currentTimeStr) {
+                return toast.warning('You cannot create session slots for a past time today');
+            }
+        }
+
         if (startTime >= endTime) {
             return toast.warning('End time must be after start time');
+        }
+
+        const hasOverlap = sessions.some(session => {
+            if (editingSessionId && session._id === editingSessionId) return false;
+            
+            const isSameDate = new Date(session.date).toDateString() === date.toDateString();
+            const isOverlapping = startTime < session.endTime && endTime > session.startTime;
+            
+            return isSameDate && isOverlapping;
+        });
+
+        if (hasOverlap) {
+            return toast.warning('You already have a session on that time');
         }
 
         try {
@@ -125,6 +159,27 @@ const TutorScheduleManager = ({ tutorId }) => {
         }
     };
 
+    const openCancelSessionModal = (sessionId) => {
+        setCancelSessionId(sessionId);
+        setIsCancelModalOpen(true);
+    };
+
+    const confirmCancelSession = async () => {
+        if (!cancelSessionId) return;
+        setCancelingSession(true);
+        try {
+            await cancelSession(cancelSessionId);
+            toast.success('Session cancelled successfully');
+            fetchSessions();
+        } catch (error) {
+            toast.error(error?.response?.data?.message || 'Failed to cancel session');
+        } finally {
+            setCancelingSession(false);
+            setIsCancelModalOpen(false);
+            setCancelSessionId(null);
+        }
+    };
+
     // Filter sessions for the selected date
     const selectedDateSessions = sessions.filter(
         (s) => new Date(s.date).toDateString() === date.toDateString()
@@ -180,12 +235,12 @@ const TutorScheduleManager = ({ tutorId }) => {
                             <FaHistory className="text-amber-400" /> Upcoming & Booked Sessions
                         </h2>
                         <div className="space-y-4">
-                            {sessions.filter(s => s.currentParticipants > 0 && new Date(s.date) >= new Date().setHours(0, 0, 0, 0)).length === 0 ? (
+                            {sessions.filter(s => s.status !== 'cancelled' && s.currentParticipants > 0 && new Date(s.date) >= new Date().setHours(0, 0, 0, 0)).length === 0 ? (
                                 <div className="text-center py-10 bg-gray-900/50 rounded-xl border border-gray-700 border-dashed">
                                     <p className="text-gray-400">No upcoming booked sessions yet.</p>
                                 </div>
                             ) : (
-                                sessions.filter(s => s.currentParticipants > 0 && new Date(s.date) >= new Date().setHours(0, 0, 0, 0)).map(session => (
+                                sessions.filter(s => s.status !== 'cancelled' && s.currentParticipants > 0 && new Date(s.date) >= new Date().setHours(0, 0, 0, 0)).map(session => (
                                     <div key={session._id} className="p-5 bg-gray-900 rounded-xl border border-gray-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                                         <div>
                                             <div className="text-lg font-bold text-gray-100 flex items-center gap-2">
@@ -204,12 +259,22 @@ const TutorScheduleManager = ({ tutorId }) => {
                                                 )}
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={() => handleFetchParticipants(session)}
-                                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-2"
-                                        >
-                                            <FaUsers /> View Participant List
-                                        </button>
+                                        <div className="flex flex-col gap-2">
+                                            <button
+                                                onClick={() => handleFetchParticipants(session)}
+                                                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                <FaUsers /> View Participant List
+                                            </button>
+                                            {session.status !== 'cancelled' && (
+                                                <button
+                                                    onClick={() => openCancelSessionModal(session._id)}
+                                                    className="px-4 py-2 border border-red-500/50 hover:bg-red-500/10 text-red-400 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                                                >
+                                                    <FaExclamationCircle /> Cancel Session
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 ))
                             )}
@@ -231,13 +296,13 @@ const TutorScheduleManager = ({ tutorId }) => {
                                         className="w-full border-none shadow-none"
                                         tileContent={({ date, view }) => {
                                             if (view === 'month') {
-                                                const hasSession = sessions.some(s => new Date(s.date).toDateString() === date.toDateString());
+                                                const hasSession = sessions.some(s => s.status !== 'cancelled' && new Date(s.date).toDateString() === date.toDateString());
                                                 return hasSession ? <div className="h-1.5 w-1.5 bg-teal-500 rounded-full mx-auto mt-0.5"></div> : null;
                                             }
                                         }}
                                         tileClassName={({ date, view }) => {
                                             if (view === 'month') {
-                                                const hasSession = sessions.some(s => new Date(s.date).toDateString() === date.toDateString());
+                                                const hasSession = sessions.some(s => s.status !== 'cancelled' && new Date(s.date).toDateString() === date.toDateString());
                                                 return hasSession ? 'font-bold text-teal-600' : null;
                                             }
                                         }}
@@ -357,9 +422,13 @@ const TutorScheduleManager = ({ tutorId }) => {
                                             let statusClass = 'bg-teal-900/50 text-teal-300 border-teal-700';
                                             let StatusIcon = FaCheckCircle;
 
-                                            if (isExpired) {
-                                                statusLabel = 'Expired';
+                                            if (session.status === 'cancelled') {
+                                                statusLabel = 'Cancelled';
                                                 statusClass = 'bg-gray-700/50 text-gray-400 border-gray-600';
+                                                StatusIcon = FaExclamationCircle;
+                                            } else if (isExpired) {
+                                                statusLabel = 'Expired';
+                                                statusClass = 'bg-gray-700/50 text-gray-300 border-gray-600';
                                                 StatusIcon = FaHistory;
                                             } else if (isFull) {
                                                 statusLabel = 'Full';
@@ -470,6 +539,16 @@ const TutorScheduleManager = ({ tutorId }) => {
                     </div>
                 )}
             </div>
+
+            {/* Cancel Session Modal */}
+            <ConfirmationModal
+                isOpen={isCancelModalOpen}
+                loading={cancelingSession}
+                onClose={() => setIsCancelModalOpen(false)}
+                onConfirm={confirmCancelSession}
+                title="Cancel Session"
+                message="Are you sure you want to cancel this entire session? All bookings for this session will be cancelled and students will be notified."
+            />
         </div>
     );
 };

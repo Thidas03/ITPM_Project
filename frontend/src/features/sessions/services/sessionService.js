@@ -34,3 +34,8 @@ export const getSessionParticipants = async (sessionId) => {
     const response = await api.get(`/sessions/${sessionId}/participants`);
     return response.data;
 };
+
+export const cancelSession = async (sessionId) => {
+    const response = await api.put(`/sessions/${sessionId}/cancel`);
+    return response.data;
+};

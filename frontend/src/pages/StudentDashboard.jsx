@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import SessionCard from '../features/sessions/components/SessionCard';
+import SessionDetailsModal from '../features/sessions/components/SessionDetailsModal';
+import ConfirmationModal from '../features/common/components/ConfirmationModal';
 import BookingModal from '../features/bookings/components/BookingModal';
 import { getTutorAvailability } from '../features/sessions/services/availabilityService';
 import { getTutorSessions } from '../features/sessions/services/sessionService';
 import { getStudentBookings, cancelBooking, createSessionBooking } from '../features/bookings/services/bookingService';
+import { getNotifications, markAllAsRead } from '../features/notifications/services/notificationService';
 import { toast } from 'react-toastify';
 import { FaCalendarAlt, FaClock, FaUser, FaLink, FaCheckCircle, FaExclamationCircle, FaTimesCircle } from 'react-icons/fa';
 
@@ -29,13 +32,43 @@ const StudentDashboard = () => {
   const [tutorSessions, setTutorSessions] = useState([]);
   const [studentBookings, setStudentBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const [selectedSession, setSelectedSession] = useState(null);
+  const [isSessionModalOpen, setIsSessionModalOpen] = useState(false);
+  const [cancelBookingId, setCancelBookingId] = useState(null);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
     fetchAvailableSlots();
     fetchTutorSessions();
     fetchStudentBookings();
+    fetchNotifications();
+
+    const interval = setInterval(fetchNotifications, 5000); // Poll every 5 seconds
+    return () => clearInterval(interval);
     // eslint-disable-next-line
   }, [selectedTutorId]);
+
+  const fetchNotifications = async () => {
+    try {
+      const data = await getNotifications(user._id);
+      setNotifications(data.data || []);
+    } catch (error) {
+      console.error('Failed to fetch notifications', error);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllAsRead(user._id);
+      fetchNotifications();
+    } catch (error) {
+      console.error('Failed to mark all as read', error);
+    }
+  };
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const fetchAvailableSlots = async () => {
     try {
@@ -75,6 +108,11 @@ const StudentDashboard = () => {
     fetchStudentBookings();
   };
 
+  const handleViewSessionDetails = (session) => {
+    setSelectedSession(session);
+    setIsSessionModalOpen(true);
+  };
+
   const handleBookScheduledSession = async (session) => {
     try {
       await createSessionBooking({
@@ -84,20 +122,31 @@ const StudentDashboard = () => {
       toast.success('Session booked successfully.');
       fetchTutorSessions();
       fetchStudentBookings();
+      setIsSessionModalOpen(false);
     } catch (error) {
       const msg = error?.response?.data?.message || 'Failed to book session';
       toast.warning(msg);
     }
   };
 
-  const handleCancelBooking = async (bookingId) => {
-    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
+  const openCancelModal = (bookingId) => {
+    setCancelBookingId(bookingId);
+    setIsCancelModalOpen(true);
+  };
+
+  const confirmCancelBooking = async () => {
+    if (!cancelBookingId) return;
     try {
-      await cancelBooking(bookingId);
+      await cancelBooking(cancelBookingId);
+      toast.success('Booking cancelled successfully');
       fetchAvailableSlots();
       fetchStudentBookings();
     } catch (error) {
+      toast.error('Failed to cancel booking');
       console.error('Failed to cancel booking', error);
+    } finally {
+      setIsCancelModalOpen(false);
+      setCancelBookingId(null);
     }
   };
 
@@ -109,10 +158,63 @@ const StudentDashboard = () => {
           <div className="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-indigo-500 shrink-0">
             STUEDU – Student
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-gray-400 text-sm hidden sm:inline">Logged in as {user.name}</span>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-teal-500 to-indigo-500 flex items-center justify-center font-bold">
-              {user.name.charAt(0)}
+          <div className="flex items-center gap-6">
+            {/* Notifications Bell */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-2 text-gray-400 hover:text-white transition-colors"
+                aria-label="Notifications"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {showNotifications && (
+                <div className="absolute right-0 mt-2 w-80 bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden z-50">
+                  <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800/50">
+                    <h3 className="font-bold text-sm">Notifications</h3>
+                    <button
+                      onClick={handleMarkAllRead}
+                      className="text-xs text-teal-400 hover:text-teal-300 transition-colors"
+                    >
+                      Mark all as read
+                    </button>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="p-8 text-center text-gray-500 text-sm">
+                        No notifications yet
+                      </div>
+                    ) : (
+                      notifications.slice(0, 10).map((notification) => (
+                        <div
+                          key={notification._id}
+                          className={`p-4 border-b border-gray-700/50 last:border-0 hover:bg-gray-700/30 transition-colors ${!notification.isRead ? 'bg-teal-500/5 border-l-2 border-l-teal-500' : ''}`}
+                        >
+                          <p className="text-sm text-gray-200 mb-1">{notification.message}</p>
+                          <span className="text-[10px] text-gray-500">
+                            {new Date(notification.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-gray-400 text-sm hidden sm:inline">Logged in as {user.name}</span>
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-teal-500 to-indigo-500 flex items-center justify-center font-bold">
+                {user.name.charAt(0)}
+              </div>
             </div>
           </div>
         </div>
@@ -151,18 +253,18 @@ const StudentDashboard = () => {
         <div className="mb-16">
           <h2 className="text-2xl font-semibold mb-6 border-b border-gray-800 pb-2">Tutor Scheduled Sessions</h2>
 
-          {tutorSessions.length === 0 ? (
+          {tutorSessions.filter(s => s.status !== 'cancelled').length === 0 ? (
             <div className="text-center py-20 bg-gray-800/30 rounded-2xl border border-gray-800 border-dashed">
               <p className="text-xl text-gray-400 mb-2">No scheduled sessions found.</p>
               <p className="text-gray-500 text-sm">The tutor has not created specific dated sessions yet.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {tutorSessions.map(session => (
+              {tutorSessions.filter(s => s.status !== 'cancelled').map(session => (
                 <SessionCard
                   key={session._id}
                   session={session}
-                  onBook={handleBookScheduledSession}
+                  onViewDetails={handleViewSessionDetails}
                 />
               ))}
             </div>
@@ -213,8 +315,13 @@ const StudentDashboard = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {studentBookings.map(booking => {
-                const dateLabel = new Date(booking.bookingDate).toLocaleDateString(undefined, {
+              {studentBookings.filter(b => b.status !== 'cancelled').length === 0 ? (
+                <div className="text-center py-6">
+                  <p className="text-gray-400">No active bookings found.</p>
+                </div>
+              ) : (
+                studentBookings.filter(b => b.status !== 'cancelled').map(booking => {
+                  const dateLabel = new Date(booking.bookingDate).toLocaleDateString(undefined, {
                   weekday: 'short',
                   month: 'short',
                   day: 'numeric',
@@ -283,7 +390,7 @@ const StudentDashboard = () => {
                       )}
                       {isUpcoming && (
                         <button
-                          onClick={() => handleCancelBooking(booking._id)}
+                          onClick={() => openCancelModal(booking._id)}
                           className="flex-1 md:flex-none px-4 py-2 rounded-xl border border-red-500/50 text-red-400 text-sm font-medium hover:bg-red-500/10 transition-colors"
                         >
                           Cancel Booking
@@ -292,11 +399,30 @@ const StudentDashboard = () => {
                     </div>
                   </div>
                 );
-              })}
+              })
+              )}
             </div>
           )}
         </div>
       </main>
+
+      {/* Session Details Modal */}
+      <SessionDetailsModal
+        isOpen={isSessionModalOpen}
+        onClose={() => setIsSessionModalOpen(false)}
+        session={selectedSession}
+        tutorName={MOCK_TUTORS.find(t => t._id === selectedTutorId)?.name}
+        onConfirm={handleBookScheduledSession}
+      />
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={isCancelModalOpen}
+        onClose={() => setIsCancelModalOpen(false)}
+        onConfirm={confirmCancelBooking}
+        title="Cancel Booking"
+        message="Are you sure you want to cancel this booking? You will lose your slot."
+      />
 
     </div>
   );
