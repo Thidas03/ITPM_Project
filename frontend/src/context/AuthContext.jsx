@@ -22,6 +22,11 @@ export const AuthProvider = ({ children }) => {
     const login = async (email, password) => {
         try {
             const { data } = await api.post('/auth/login', { email, password });
+            
+            if (data.requires2FA) {
+                return { success: true, requires2FA: true, userId: data.userId, message: data.message };
+            }
+
             setUser(data.user);
             setToken(data.token);
             localStorage.setItem('token', data.token);
@@ -35,9 +40,9 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const register = async (userData) => {
+    const verify2FA = async (userId, otp) => {
         try {
-            const { data } = await api.post('/auth/register', userData);
+            const { data } = await api.post('/auth/verify-2fa', { userId, otp });
             setUser(data.user);
             setToken(data.token);
             localStorage.setItem('token', data.token);
@@ -46,7 +51,86 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
             return {
                 success: false,
+                message: error.response?.data?.message || 'Invalid or expired OTP'
+            };
+        }
+    };
+
+    const googleLogin = async (tokenId) => {
+        try {
+            const { data } = await api.post('/auth/google', { tokenId });
+            setUser(data.user);
+            setToken(data.token);
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            return { success: true };
+        } catch (error) {
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Google login failed'
+            };
+        }
+    };
+
+    const forgotPasswordOTP = async (email) => {
+        try {
+            const { data } = await api.post('/auth/forgot-password-otp', { email });
+            return { success: true, message: data.message };
+        } catch (error) {
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Failed to send OTP'
+            };
+        }
+    };
+
+    const verifyResetOTP = async (email, otp) => {
+        try {
+            const { data } = await api.post('/auth/verify-reset-otp', { email, otp });
+            return { success: true, message: data.message };
+        } catch (error) {
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Invalid or expired OTP'
+            };
+        }
+    };
+
+    const resetPassword = async (email, otp, newPassword) => {
+        try {
+            const { data } = await api.post('/auth/reset-password', { email, otp, newPassword });
+            return { success: true, message: data.message };
+        } catch (error) {
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Password reset failed'
+            };
+        }
+    };
+
+    const register = async (userData) => {
+        try {
+            const { data } = await api.post('/auth/register', userData);
+            if (data.requiresRegistrationOTP) {
+                return { success: true, requiresRegistrationOTP: true, userId: data.userId };
+            }
+            return { success: true };
+        } catch (error) {
+            return {
+                success: false,
                 message: error.response?.data?.message || 'Registration failed'
+            };
+        }
+    };
+
+    const verifyRegistrationOTP = async (userId, otp) => {
+        try {
+            const { data } = await api.post('/auth/verify-registration-otp', { userId, otp });
+            return { success: true, message: data.message };
+        } catch (error) {
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Invalid or expired OTP'
             };
         }
     };
@@ -58,8 +142,14 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('user');
     };
 
+    const updateProfile = (updatedUserData) => {
+        const newUser = { ...user, ...updatedUserData };
+        setUser(newUser);
+        localStorage.setItem('user', JSON.stringify(newUser));
+    };
+
     return (
-        <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+        <AuthContext.Provider value={{ user, token, loading, login, verify2FA, verifyRegistrationOTP, googleLogin, forgotPasswordOTP, verifyResetOTP, resetPassword, register, updateProfile, logout }}>
             {children}
         </AuthContext.Provider>
     );

@@ -63,55 +63,60 @@ const Dashboard = () => {
         fetchAvailableSessions(); // Refresh list after booking
     };
 
-    // If user is a HOST (tutor), render their schedule manager dashboard
-    if (user && user.role === 'Host') {
-        return <TutorScheduleManager tutorId={user._id} />;
-    }
-
+    // If !user return null handled below
     if (!user) return null;
 
     // If user is a STUDENT, render the booking dashboard
     return (
-        <div className="bg-[#f0f9ff] min-h-screen text-slate-800 font-sans">
+        <div className="bg-gray-900 min-h-screen text-gray-300 font-sans">
             {/* Top Navbar */}
-            <nav className="border-b border-blue-100 bg-white/80 backdrop-blur-md sticky top-0 z-40">
+            <nav className="border-b border-gray-700 bg-gray-800/80 backdrop-blur-md sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-                    <div className="text-xl font-black text-blue-600 shrink-0">
+                    <div className="text-xl font-black text-teal-400 shrink-0">
                         STUEDU
                     </div>
                     <div className="flex items-center gap-6">
+                        {user?.role === 'Admin' && (
+                            <Link to="/admin" className="px-4 py-1.5 bg-slate-800 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-700 transition">Admin Panel</Link>
+                        )}
                         {trustProfile && (
-                            <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full border border-blue-100">
-                                <span className={`w-2 h-2 rounded-full ${trustProfile.trustLevel === 'High' ? 'bg-green-500' :
+                            <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-teal-500/10 rounded-full border border-gray-700">
+                                <span className={`w-2 h-2 rounded-full ${trustProfile.trustLevel === 'High' ? 'bg-gradient-to-r from-amber-500 to-orange-600' :
                                     trustProfile.trustLevel === 'Medium' ? 'bg-yellow-500' : 'bg-red-500'
                                     }`}></span>
-                                <span className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
+                                <span className="text-xs font-semibold text-teal-400 uppercase tracking-wider">
                                     {trustProfile.trustLevel} Trust
                                 </span>
                                 <span className="text-blue-200">|</span>
-                                <span className="text-xs text-slate-500">
+                                <span className="text-xs text-gray-400">
                                     Limit: {trustProfile.bookingLimit}
                                 </span>
                             </div>
                         )}
                         <Link to="/profile" className="flex items-center gap-3 group">
                             <div className="flex flex-col items-end group-hover:opacity-80 transition">
-                                <span className="text-slate-500 text-sm hidden sm:inline leading-none">
-                                    Logged in as <span className="text-slate-800 font-medium group-hover:text-blue-500 transition">{user.firstName} {user.lastName}</span>
-                                </span>
-                                {trustProfile?.badges?.map(badge => (
-                                    <span key={badge} className="text-[10px] text-blue-500 font-bold uppercase mt-1">
-                                        ✨ {badge}
-                                    </span>
-                                ))}
+                                <span className="text-gray-300 font-bold group-hover:text-teal-500 transition leading-none mb-1">{user.firstName} {user.lastName}</span>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="w-16 h-1 w-full bg-gray-800 rounded-full overflow-hidden">
+                                        <div
+                                            className={`h-full ${trustProfile?.trustLevel === 'High' ? 'bg-gradient-to-r from-amber-500 to-orange-600' : trustProfile?.trustLevel === 'Medium' ? 'bg-gradient-to-r from-teal-500 to-indigo-600' : 'bg-red-500'}`}
+                                            style={{ width: `${trustProfile?.trustPercentage || 0}%` }}
+                                        ></div>
+                                    </div>
+                                    <span className="text-[10px] font-black text-slate-400">{trustProfile?.trustPercentage || 0}%</span>
+                                </div>
                             </div>
-                            <div className="w-9 h-9 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold shadow-md group-hover:scale-105 transition transform">
-                                {user.firstName.charAt(0)}
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-teal-500 to-indigo-600 text-white flex items-center justify-center font-bold shadow-md group-hover:scale-105 transition transform overflow-hidden">
+                                {user.profilePicture ? (
+                                    <img src={user.profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    user.firstName.charAt(0)
+                                )}
                             </div>
                         </Link>
                         <button
                             onClick={handleLogout}
-                            className="text-slate-500 hover:text-blue-600 text-sm font-medium transition flex items-center gap-2 border border-blue-100 px-4 py-2 rounded-xl hover:bg-blue-50"
+                            className="text-gray-400 hover:text-teal-400 text-sm font-medium transition flex items-center gap-2 border border-gray-700 px-4 py-2 rounded-xl hover:bg-teal-500/10"
                         >
                             Logout
                         </button>
@@ -121,37 +126,94 @@ const Dashboard = () => {
 
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-6 py-10">
-                <header className="mb-10">
-                    <h1 className="text-4xl font-extrabold text-slate-800 mb-2">Book a Session</h1>
-                    <p className="text-slate-500 text-lg">Find the perfect time with your tutor.</p>
-                </header>
+                {user.role === 'Host' ? (
+                    <TutorScheduleManager tutorId={user._id} />
+                ) : (
+                    <>
+                        <header className="mb-10">
+                            <h1 className="text-4xl font-extrabold text-gray-300 mb-2">Book a Session</h1>
+                            <p className="text-gray-400 text-lg">Find the perfect time with your tutor.</p>
+                        </header>
 
-                {/* Smart Recommendation Banner */}
-                <div className="mb-12">
-                    <SmartSlotRecommend tutorId={selectedTutorId} onBook={handleBookClick} />
-                </div>
+                        {/* Dynamic Access Status Card */}
+                        {trustProfile && (
+                            <div className="mb-10 grid grid-cols-1 md:grid-cols-12 gap-6 bg-gray-800 p-6 rounded-[2rem] border border-gray-700 shadow-xl shadow-blue-50/50">
+                                <div className="md:col-span-4 border-b md:border-b-0 md:border-r border-gray-700 pb-6 md:pb-0 md:pr-6 flex flex-col justify-center">
+                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Dynamic Access Profile</p>
+                                    <h2 className={`text-4xl font-black mb-1 ${trustProfile.trustLevel === 'High' ? 'text-green-500' : trustProfile.trustLevel === 'Medium' ? 'text-teal-400' : 'text-red-500'}`}>
+                                        {trustProfile.trustLevel} Trust
+                                    </h2>
+                                    <p className="text-gray-400 text-sm font-medium">
+                                        Level: {trustProfile.trustLevel === 'High' ? 'Elite Contributor' : trustProfile.trustLevel === 'Medium' ? 'Standard Member' : 'Restricted Access'}
+                                    </p>
+                                </div>
+                                <div className="md:col-span-4 border-b md:border-b-0 md:border-r border-gray-700 py-6 md:py-0 md:px-6">
+                                    <div className="flex items-center gap-4 h-full">
+                                        <div className="w-16 h-16 rounded-2xl bg-teal-500/10 flex items-center justify-center text-3xl shadow-inner">
+                                            {trustProfile.trustLevel === 'High' ? '🚀' : trustProfile.trustLevel === 'Medium' ? '📅' : '⚠️'}
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Booking Capacity</p>
+                                            <p className="text-2xl font-bold text-gray-300">{trustProfile.bookingLimit} Slots Max</p>
+                                            <div className="mt-1 flex gap-1">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <div key={i} className={`h-1 w-4 rounded-full ${i < trustProfile.bookingLimit ? 'bg-gradient-to-r from-teal-500 to-indigo-600' : 'bg-gray-800'}`}></div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="md:col-span-4 pt-6 md:pt-0 md:pl-6 flex flex-col justify-center">
+                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Live Risk Insights</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {trustProfile.badges.map(badge => (
+                                            <span key={badge} className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-100 animate-pulse">
+                                                ✨ {badge}
+                                            </span>
+                                        ))}
+                                        {trustProfile.trustLevel === 'Low' && (
+                                            <span className="px-3 py-1 bg-red-50 text-red-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-red-100">
+                                                Block Risk: High
+                                            </span>
+                                        )}
+                                        {trustProfile.stats.attendanceRate > 90 && (
+                                            <span className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-green-100">
+                                                Perfect Attendance
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
-                {/* All Available Slots */}
-                <div>
-                    <h2 className="text-2xl font-bold text-slate-800 mb-6 border-b border-blue-100 pb-2">All Available Slots</h2>
-
-                    {sessions.length === 0 ? (
-                        <div className="text-center py-20 bg-white rounded-3xl border border-blue-100 border-dashed shadow-sm">
-                            <p className="text-xl text-slate-500 mb-2 font-semibold">No available slots found.</p>
-                            <p className="text-slate-400 text-sm">The tutor has not set their availability yet.</p>
+                        {/* Smart Recommendation Banner */}
+                        <div className="mb-12">
+                            <SmartSlotRecommend tutorId={selectedTutorId} onBook={handleBookClick} />
                         </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {sessions.map(session => (
-                                <SessionCard
-                                    key={session._id}
-                                    session={session}
-                                    onBook={handleBookClick}
-                                />
-                            ))}
+
+                        {/* All Available Slots */}
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-300 mb-6 border-b border-gray-700 pb-2">All Available Slots</h2>
+
+                            {sessions.length === 0 ? (
+                                <div className="text-center py-20 bg-gray-800 rounded-3xl border border-gray-700 border-dashed shadow-sm">
+                                    <p className="text-xl text-gray-400 mb-2 font-semibold">No available slots found.</p>
+                                    <p className="text-slate-400 text-sm">The tutor has not set their availability yet.</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    {sessions.map(session => (
+                                        <SessionCard
+                                            key={session._id}
+                                            session={session}
+                                            onBook={handleBookClick}
+                                        />
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
+                    </>
+                )}
             </main>
 
             <BookingModal

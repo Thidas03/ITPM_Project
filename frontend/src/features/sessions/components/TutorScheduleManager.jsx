@@ -63,11 +63,11 @@ const TutorScheduleManager = ({ tutorId }) => {
     );
 
     return (
-        <div className="bg-gray-900 text-white min-h-screen p-8 w-full font-sans">
+        <div className="text-gray-300 w-full font-sans">
             <div className="max-w-6xl mx-auto space-y-8">
-                <header className="border-b border-gray-800 pb-6">
-                    <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-indigo-500">
-                        Tutor Schedule Manager
+                <header className="mb-8">
+                    <h1 className="text-4xl font-extrabold text-gray-300">
+                        Work Schedule
                     </h1>
                     <p className="text-gray-400 mt-2">Manage your availability, sessions, and participants efficiently.</p>
                 </header>
@@ -76,18 +76,17 @@ const TutorScheduleManager = ({ tutorId }) => {
 
                     {/* Left Column: Calendar & Filters */}
                     <div className="lg:col-span-4 space-y-6">
-                        <div className="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700">
-                            <h2 className="text-xl font-semibold mb-4 text-gray-200">Select Date</h2>
-                            {/* Overriding some react-calendar styles directly via tailwind classes on a wrapper, or relies on index.css if customized */}
-                            <div className="text-gray-900 rounded-lg overflow-hidden border border-gray-300 bg-white p-2">
+                        <div className="bg-gray-800 p-6 rounded-[2rem] shadow-xl shadow-blue-50 border border-gray-700">
+                            <h2 className="text-xl font-bold mb-4 text-gray-300">Select Date</h2>
+                            <div className="rounded-2xl overflow-hidden border border-gray-700 bg-gray-800 p-2">
                                 <Calendar
                                     onChange={setDate}
                                     value={date}
                                     className="w-full border-none shadow-none"
                                 />
                             </div>
-                            <div className="mt-4 p-4 bg-gray-700/50 rounded-xl border border-gray-600">
-                                <p className="text-sm text-gray-300">Selected Date:</p>
+                            <div className="mt-4 p-4 bg-teal-500/10 rounded-2xl border border-gray-700">
+                                <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Editing Shift For</p>
                                 <p className="text-lg font-bold text-teal-400">{date.toDateString()}</p>
                             </div>
                         </div>
@@ -97,91 +96,89 @@ const TutorScheduleManager = ({ tutorId }) => {
                     <div className="lg:col-span-8 space-y-8">
 
                         {/* Create Session Form */}
-                        <div className="bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-xl border border-gray-700">
-                            <h2 className="text-2xl font-semibold mb-6 text-gray-100 border-b border-gray-700 pb-3">Add Availability Slot</h2>
+                        <div className="bg-gray-800 p-8 rounded-[2rem] shadow-xl shadow-blue-50 border border-gray-700">
+                            <h2 className="text-2xl font-bold mb-6 text-gray-300 border-b border-gray-700 pb-3">Add Availability Slot</h2>
                             <form onSubmit={handleCreateSession} className="space-y-6">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-2">Start Time</label>
+                                        <label className="block text-sm font-bold text-gray-400 mb-2">Start Time</label>
                                         <input
                                             type="time"
                                             value={startTime}
                                             onChange={(e) => setStartTime(e.target.value)}
-                                            className="w-full bg-gray-900 text-white border border-gray-600 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all"
+                                            className="w-full bg-gray-800/50 border border-gray-700 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-medium"
                                             required
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-2">End Time</label>
+                                        <label className="block text-sm font-bold text-gray-400 mb-2">End Time</label>
                                         <input
                                             type="time"
                                             value={endTime}
                                             onChange={(e) => setEndTime(e.target.value)}
-                                            className="w-full bg-gray-900 text-white border border-gray-600 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                                            className="w-full bg-gray-800/50 border border-gray-700 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all font-medium"
                                             required
                                         />
                                     </div>
                                     <div className="sm:col-span-2">
-                                        <label className="block text-sm font-medium text-gray-300 mb-2">Max Participants</label>
+                                        <label className="block text-sm font-bold text-gray-400 mb-2">Max Participants</label>
                                         <input
                                             type="number"
                                             min="1"
                                             value={maxParticipants}
                                             onChange={(e) => setMaxParticipants(parseInt(e.target.value))}
-                                            className="w-full bg-gray-900 text-white border border-gray-600 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                                            className="w-full bg-gray-800/50 border border-gray-700 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all font-medium"
                                             required
                                         />
                                     </div>
                                 </div>
                                 <button
                                     type="submit"
-                                    className="w-full bg-gradient-to-r from-teal-500 to-indigo-600 hover:from-teal-400 hover:to-indigo-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg transform transition hover:-translate-y-1"
+                                    className="w-full bg-gradient-to-r from-teal-600 to-indigo-700 hover:from-teal-500 hover:to-indigo-600 text-white font-black py-4 px-6 rounded-2xl shadow-lg shadow-teal-500/20 transform transition hover:-translate-y-1 uppercase tracking-widest text-sm"
                                 >
-                                    Create Availability
+                                    Confirm Availability
                                 </button>
                             </form>
                         </div>
 
                         {/* List of Sessions */}
-                        <div className="bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-xl border border-gray-700">
-                            <h2 className="text-2xl font-semibold mb-6 text-gray-100 flex items-center justify-between border-b border-gray-700 pb-3">
-                                <span>Slots on <span className="text-teal-400">{date.toLocaleDateString()}</span></span>
-                                <span className="text-sm font-normal px-3 py-1 bg-gray-700 rounded-full text-gray-300">{selectedDateSessions.length} slots</span>
+                        <div className="bg-gray-800 p-8 rounded-[2rem] shadow-xl shadow-blue-50 border border-gray-700">
+                            <h2 className="text-2xl font-bold mb-6 text-gray-300 flex items-center justify-between border-b border-gray-700 pb-3">
+                                <span>Active Slots</span>
+                                <span className="text-xs font-black px-3 py-1 bg-teal-500/10 rounded-full text-teal-400 uppercase tracking-widest">{selectedDateSessions.length} total</span>
                             </h2>
 
                             {loading ? (
-                                <div className="animate-pulse flex space-x-4">
-                                    <div className="flex-1 space-y-4 py-1">
-                                        <div className="h-20 bg-gray-700 rounded-xl"></div>
-                                        <div className="h-20 bg-gray-700 rounded-xl"></div>
-                                    </div>
+                                <div className="animate-pulse space-y-4">
+                                    <div className="h-20 bg-teal-500/10 rounded-2xl"></div>
+                                    <div className="h-20 bg-teal-500/10 rounded-2xl"></div>
                                 </div>
                             ) : selectedDateSessions.length === 0 ? (
-                                <div className="text-center py-10 bg-gray-900/50 rounded-xl border border-gray-700 border-dashed">
-                                    <p className="text-gray-400">No availability set for this date.</p>
+                                <div className="text-center py-10 bg-teal-500/10/20 rounded-2xl border border-gray-700 border-dashed">
+                                    <p className="text-slate-400 font-medium">No sessions scheduled for this date.</p>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
                                     {selectedDateSessions.map(session => (
-                                        <div key={session._id} className="group flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 bg-gray-900 rounded-xl border border-gray-700 hover:border-teal-500/50 transition-all shadow-md">
+                                        <div key={session._id} className="group flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 bg-gray-800 rounded-2xl border border-gray-700 hover:border-blue-400/50 transition-all shadow-sm">
                                             <div className="mb-4 sm:mb-0">
-                                                <div className="text-lg font-bold text-gray-100">
+                                                <div className="text-lg font-black text-gray-300">
                                                     {session.startTime} - {session.endTime}
                                                 </div>
-                                                <div className="text-sm mt-1 flex items-center gap-3">
-                                                    <span className={`px-2 py-1 tracking-wide text-xs uppercase font-semibold rounded-full ${session.status === 'booked' ? 'bg-indigo-900/50 text-indigo-300 border border-indigo-700' : 'bg-teal-900/50 text-teal-300 border border-teal-700'}`}>
+                                                <div className="text-xs mt-1 flex items-center gap-3">
+                                                    <span className={`px-2 py-0.5 tracking-widest text-[10px] uppercase font-black rounded-lg border ${session.status === 'booked' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-green-50 text-green-600 border-green-100'}`}>
                                                         {session.status}
                                                     </span>
-                                                    <span className="text-gray-400">
-                                                        Participants: <span className="text-white font-medium">{session.currentParticipants}</span> / {session.maxParticipants}
+                                                    <span className="text-slate-400 font-medium">
+                                                        Capacity: <span className="text-gray-300 font-bold">{session.currentParticipants}</span> / {session.maxParticipants}
                                                     </span>
                                                 </div>
                                             </div>
                                             <button
                                                 onClick={() => handleDeleteSession(session._id)}
-                                                className="opacity-100 hover:bg-red-500/20 text-red-400 hover:text-red-300 px-4 py-2 rounded-lg border border-red-900/50 transition-colors text-sm font-medium w-full sm:w-auto"
+                                                className="px-6 py-2 rounded-xl text-red-500 hover:bg-red-50 font-bold text-sm border border-transparent hover:border-red-100 transition-all"
                                             >
-                                                Delete
+                                                Remove Slot
                                             </button>
                                         </div>
                                     ))}

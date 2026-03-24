@@ -53,7 +53,7 @@ const SessionCard = ({ session, onBook }) => {
                 className={`w-full py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300
           ${isAvailable
                         ? 'bg-gradient-to-r from-teal-500 to-indigo-600 text-white shadow-lg hover:shadow-teal-500/25 hover:from-teal-400 hover:to-indigo-500'
-                        : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`}
+                        : 'bg-gray-700 text-gray-400 cursor-not-allowed'}`}
             >
                 {isAvailable ? 'Book Session' : 'Unavailable'}
             </button>

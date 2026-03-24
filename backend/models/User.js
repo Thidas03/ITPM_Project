@@ -54,19 +54,57 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    misconductCount: {
+        type: Number,
+        default: 0
+    },
+    averageRating: {
+        type: Number,
+        default: 5.0
+    },
+    tutorRequestStatus: {
+        type: String,
+        enum: ['none', 'pending', 'approved', 'rejected'],
+        default: 'none'
+    },
     isBlocked: {
         type: Boolean,
         default: false
+    },
+    isActive: {
+        type: Boolean,
+        default: true
     },
     blockedUntil: {
         type: Date,
         default: null
     },
     badges: [String],
+    profilePicture: {
+        type: String,
+        default: null
+    },
     notificationPreferences: {
         email: { type: Boolean, default: true },
         sms: { type: Boolean, default: false },
         push: { type: Boolean, default: true }
+    },
+    // Account Security fields
+    isVerified: {
+        type: Boolean,
+        default: false
+    },
+    is2FAEnabled: {
+        type: Boolean,
+        default: false
+    },
+    otpSecret: {
+        type: String,
+        default: null
+    },
+    otpExpires: {
+        type: Date,
+        default: null
     }
 }, {
     timestamps: true
@@ -122,6 +160,17 @@ userSchema.methods.calculateBadges = function () {
     }
 
     return currentBadges;
+};
+
+// Calculate a Trust Percentage (0-100)
+userSchema.methods.getTrustPercentage = function () {
+    const totalBooked = this.attendedSessions + this.missedSessions;
+    const attendanceRate = totalBooked === 0 ? 100 : (this.attendedSessions / totalBooked) * 100;
+
+    // Simple penalty factor for cancellations
+    const cancellationPenalty = Math.min(this.cancellations * 5, 40);
+
+    return Math.max(0, Math.round(attendanceRate - cancellationPenalty));
 };
 
 const User = mongoose.model('User', userSchema);
