@@ -214,14 +214,14 @@ const AdminDashboard = () => {
                     <div className="space-y-6">
                         <div className="flex flex-wrap gap-4 justify-between items-center bg-gray-800 p-4 rounded-3xl border border-slate-100 shadow-sm">
                             <div className="flex gap-4 items-center flex-1">
-                                <input 
-                                    type="text" 
-                                    placeholder="Search by name or email..." 
+                                <input
+                                    type="text"
+                                    placeholder="Search by name or email..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     className="px-4 py-2 bg-gray-900 border border-gray-700 rounded-xl text-gray-300 text-sm focus:outline-none focus:border-teal-500 w-full max-w-sm"
                                 />
-                                <select 
+                                <select
                                     value={roleFilter}
                                     onChange={(e) => setRoleFilter(e.target.value)}
                                     className="px-4 py-2 bg-gray-900 border border-gray-700 rounded-xl text-gray-300 text-sm focus:outline-none focus:border-teal-500"
@@ -232,87 +232,87 @@ const AdminDashboard = () => {
                                     <option value="Admin">Admin</option>
                                 </select>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setIsCreateModalOpen(true)}
                                 className="px-5 py-2 bg-gradient-to-r from-teal-500 to-indigo-600 text-white font-bold rounded-xl shadow-lg hover:from-teal-400 hover:to-indigo-500 transition"
                             >
                                 + Add User
                             </button>
                         </div>
-                        
+
                         <div className="bg-gray-800 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/20 overflow-hidden">
-                        <table className="w-full text-left">
-                            <thead className="bg-gray-900 border-b border-slate-100">
-                                <tr>
-                                    <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Identity</th>
-                                    <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Access Role</th>
-                                    <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Trust Status</th>
-                                    <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Operational Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {filteredUsers.map(u => (
-                                    <tr key={u._id} className="hover:bg-gray-900/50 transition">
-                                        <td className="px-8 py-5">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-xl bg-gray-800 overflow-hidden">
-                                                    {u.profilePicture ? (
-                                                        <img src={u.profilePicture} alt="" className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center font-bold text-slate-400">{u.firstName[0]}</div>
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <p className="font-bold text-gray-300">{u.firstName} {u.lastName}</p>
-                                                    <p className="text-xs text-slate-400">{u.email}</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${u.role === 'Admin' ? 'bg-amber-50 text-amber-600 border border-amber-100' : u.role === 'Host' ? 'bg-teal-500/10 text-teal-400 border border-gray-700' : 'bg-gray-800 text-gray-400'}`}>
-                                                {u.role}
-                                            </span>
-                                        </td>
-                                        <td className="px-8 py-5">
-                                            <div className="flex flex-col gap-1">
-                                                <div className="flex items-center gap-2">
-                                                    <div className={`w-2 h-2 rounded-full ${!u.isActive ? 'bg-gray-500' : u.isBlocked ? 'bg-red-500' : 'bg-gradient-to-r from-teal-500 to-indigo-600'}`}></div>
-                                                    <span className="text-xs font-bold text-gray-300">
-                                                        {!u.isActive ? 'Inactive' : u.isBlocked ? 'Blocked' : 'Active'}
-                                                    </span>
-                                                </div>
-                                                <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                                                    Trust: <span className={u.trustScore >= 75 ? 'text-green-500' : u.trustScore >= 50 ? 'text-teal-500' : 'text-amber-500'}>{u.trustScore || 100}%</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-8 py-5 text-right">
-                                            <div className="flex justify-end gap-2 flex-wrap max-w-[200px] ml-auto">
-                                                {u.tutorRequestStatus === 'pending' && (
-                                                    <button onClick={() => handleApproveHost(u._id)} className="px-3 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl text-xs font-black transition">
-                                                        Approve Host
-                                                    </button>
-                                                )}
-                                                <button
-                                                    onClick={() => handleBlockUser(u._id, !u.isBlocked)}
-                                                    className={`px-3 py-2 rounded-xl text-xs font-black transition ${u.isBlocked ? 'bg-green-50 text-green-600 hover:bg-green-100' : 'bg-gray-900 text-gray-400 hover:bg-gray-800'}`}
-                                                >
-                                                    {u.isBlocked ? 'Unblock' : 'Block'}
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteUser(u._id)}
-                                                    className="px-3 py-2 bg-red-50 text-red-500 hover:bg-red-100 rounded-xl text-xs font-black transition"
-                                                >
-                                                    Delete
-                                                </button>
-                                            </div>
-                                        </td>
+                            <table className="w-full text-left">
+                                <thead className="bg-gray-900 border-b border-slate-100">
+                                    <tr>
+                                        <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Identity</th>
+                                        <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Access Role</th>
+                                        <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Trust Status</th>
+                                        <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Operational Actions</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {filteredUsers.map(u => (
+                                        <tr key={u._id} className="hover:bg-gray-900/50 transition">
+                                            <td className="px-8 py-5">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-xl bg-gray-800 overflow-hidden">
+                                                        {u.profilePicture ? (
+                                                            <img src={u.profilePicture} alt="" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center font-bold text-slate-400">{u.firstName[0]}</div>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-gray-300">{u.firstName} {u.lastName}</p>
+                                                        <p className="text-xs text-slate-400">{u.email}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${u.role === 'Admin' ? 'bg-amber-50 text-amber-600 border border-amber-100' : u.role === 'Host' ? 'bg-teal-500/10 text-teal-400 border border-gray-700' : 'bg-gray-800 text-gray-400'}`}>
+                                                    {u.role}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`w-2 h-2 rounded-full ${!u.isActive ? 'bg-gray-500' : u.isBlocked ? 'bg-red-500' : 'bg-gradient-to-r from-teal-500 to-indigo-600'}`}></div>
+                                                        <span className="text-xs font-bold text-gray-300">
+                                                            {!u.isActive ? 'Inactive' : u.isBlocked ? 'Blocked' : 'Active'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                                                        Trust: <span className={u.trustScore >= 75 ? 'text-green-500' : u.trustScore >= 50 ? 'text-teal-500' : 'text-amber-500'}>{u.trustScore || 100}%</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-5 text-right">
+                                                <div className="flex justify-end gap-2 flex-wrap max-w-[200px] ml-auto">
+                                                    {u.tutorRequestStatus === 'pending' && (
+                                                        <button onClick={() => handleApproveHost(u._id)} className="px-3 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl text-xs font-black transition">
+                                                            Approve Host
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => handleBlockUser(u._id, !u.isBlocked)}
+                                                        className={`px-3 py-2 rounded-xl text-xs font-black transition ${u.isBlocked ? 'bg-green-50 text-green-600 hover:bg-green-100' : 'bg-gray-900 text-gray-400 hover:bg-gray-800'}`}
+                                                    >
+                                                        {u.isBlocked ? 'Unblock' : 'Block'}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteUser(u._id)}
+                                                        className="px-3 py-2 bg-red-50 text-red-500 hover:bg-red-100 rounded-xl text-xs font-black transition"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
                 )}
 
                 {/* Sessions Tab */}
@@ -369,20 +369,20 @@ const AdminDashboard = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">First Name</label>
-                                    <input required type="text" value={newUserForm.firstName} onChange={(e) => setNewUserForm({...newUserForm, firstName: e.target.value})} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:border-teal-500 transition" />
+                                    <input required type="text" value={newUserForm.firstName} onChange={(e) => setNewUserForm({ ...newUserForm, firstName: e.target.value })} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:border-teal-500 transition" />
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">Last Name</label>
-                                    <input required type="text" value={newUserForm.lastName} onChange={(e) => setNewUserForm({...newUserForm, lastName: e.target.value})} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:border-teal-500 transition" />
+                                    <input required type="text" value={newUserForm.lastName} onChange={(e) => setNewUserForm({ ...newUserForm, lastName: e.target.value })} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:border-teal-500 transition" />
                                 </div>
                             </div>
                             <div>
                                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">Email</label>
-                                <input required type="email" value={newUserForm.email} onChange={(e) => setNewUserForm({...newUserForm, email: e.target.value})} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:border-teal-500 transition" />
+                                <input required type="email" value={newUserForm.email} onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:border-teal-500 transition" />
                             </div>
                             <div>
                                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">Assign Role</label>
-                                <select value={newUserForm.role} onChange={(e) => setNewUserForm({...newUserForm, role: e.target.value})} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:border-teal-500 transition">
+                                <select value={newUserForm.role} onChange={(e) => setNewUserForm({ ...newUserForm, role: e.target.value })} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:border-teal-500 transition">
                                     <option value="Student">Student</option>
                                     <option value="Host">Host</option>
                                     <option value="Admin">Admin</option>
