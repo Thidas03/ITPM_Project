@@ -7,11 +7,28 @@ import AvailabilityManager from './AvailabilityManager';
 import { FaUsers, FaLink, FaCalendarAlt, FaClock, FaCheckCircle, FaExclamationCircle, FaHistory } from 'react-icons/fa';
 import ConfirmationModal from '../../common/components/ConfirmationModal';
 
+const parseSessionTime = (dateStr, timeStr) => {
+  if (!dateStr || !timeStr || timeStr === 'N/A') return null;
+  const d = new Date(dateStr);
+  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM|am|pm)?/);
+  if (!match) return null;
+  let [ , hours, minutes, ampm ] = match;
+  hours = parseInt(hours, 10);
+  minutes = parseInt(minutes, 10);
+  if (ampm) {
+    if (ampm.toLowerCase() === 'pm' && hours < 12) hours += 12;
+    if (ampm.toLowerCase() === 'am' && hours === 12) hours = 0;
+  }
+  d.setHours(hours, minutes, 0, 0);
+  return d;
+};
+
 const TutorScheduleManager = ({ tutorId }) => {
     const [activeTab, setActiveTab] = useState('sessions');
 
     // Sessions state
     const [date, setDate] = useState(new Date());
+    const [currentTime, setCurrentTime] = useState(new Date());
     const [startTime, setStartTime] = useState('09:00');
     const [endTime, setEndTime] = useState('10:00');
     const [maxParticipants, setMaxParticipants] = useState(1);
@@ -39,6 +56,8 @@ const TutorScheduleManager = ({ tutorId }) => {
 
     useEffect(() => {
         fetchSessions();
+        const interval = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(interval);
         // eslint-disable-next-line
     }, [tutorId]);
 
@@ -240,43 +259,96 @@ const TutorScheduleManager = ({ tutorId }) => {
                                     <p className="text-gray-400">No upcoming booked sessions yet.</p>
                                 </div>
                             ) : (
-                                sessions.filter(s => s.status !== 'cancelled' && s.currentParticipants > 0 && new Date(s.date) >= new Date().setHours(0, 0, 0, 0)).map(session => (
-                                    <div key={session._id} className="p-5 bg-gray-900 rounded-xl border border-gray-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                        <div>
-                                            <div className="text-lg font-bold text-gray-100 flex items-center gap-2">
-                                                <FaCalendarAlt className="text-teal-500" /> {new Date(session.date).toLocaleDateString()}
-                                                <span className="text-gray-500 font-normal">|</span>
-                                                <FaClock className="text-teal-500" /> {session.startTime} - {session.endTime}
+                                sessions.filter(s => s.status !== 'cancelled' && s.currentParticipants > 0 && new Date(s.date) >= new Date().setHours(0, 0, 0, 0)).map(session => {
+                                    const startDateTime = parseSessionTime(session.date, session.startTime);
+                                    const endDateTime = parseSessionTime(session.date, session.endTime);
+                                    
+                                    let sessionPhase = 'completed';
+                                    if (startDateTime && endDateTime) {
+                                      if (currentTime < startDateTime) sessionPhase = 'upcoming';
+                                      else if (currentTime >= startDateTime && currentTime <= endDateTime) sessionPhase = 'ongoing';
+                                    }
+
+                                    let countdownStr = '';
+                                    let phaseColorClass = 'text-gray-400';
+                                    if (sessionPhase === 'upcoming') {
+                                      const diff = startDateTime - currentTime;
+                                      const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                                      const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                                      const m = Math.floor((diff / 1000 / 60) % 60);
+                                      const s = Math.floor((diff / 1000) % 60);
+                                      let parts = [];
+                                      if (d > 0) parts.push(`${d}d`);
+                                      if (h > 0 || d > 0) parts.push(`${h}h`);
+                                      if (m > 0 || h > 0 || d > 0) parts.push(`${m}m`);
+                                      parts.push(`${s}s`);
+                                      countdownStr = `Starts in ${parts.join(' ')}`;
+                                      phaseColorClass = 'text-green-400 font-bold';
+                                    } else if (sessionPhase === 'ongoing') {
+                                      countdownStr = 'Session in Progress';
+                                      phaseColorClass = 'text-yellow-400 font-bold';
+                                    } else {
+                                      countdownStr = 'Session Completed';
+                                      phaseColorClass = 'text-gray-500 font-bold';
+                                    }
+                                    
+                                    const canJoin = startDateTime && endDateTime && (currentTime >= new Date(startDateTime.getTime() - 10 * 60000) && currentTime <= endDateTime);
+
+                                    return (
+                                        <div key={session._id} className="p-5 bg-gray-900 rounded-xl border border-gray-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-teal-500/50 transition-colors">
+                                            <div className="flex-1">
+                                                <div className="text-lg font-bold text-gray-100 flex items-center gap-2">
+                                                    <FaCalendarAlt className="text-teal-500" /> {new Date(session.date).toLocaleDateString()}
+                                                    <span className="text-gray-500 font-normal">|</span>
+                                                    <FaClock className="text-teal-500" /> {session.startTime} - {session.endTime}
+                                                </div>
+                                                <div className="flex flex-col gap-2 mt-3">
+                                                    <div className="flex items-center gap-4">
+                                                        <span className="flex items-center gap-1.5 text-sm text-gray-400">
+                                                            <FaUsers className="text-indigo-400" /> {session.currentParticipants} / {session.maxParticipants} students
+                                                        </span>
+                                                        {session.meetingLink && (
+                                                            <span className="flex items-center gap-1.5 text-sm text-gray-400">
+                                                                <FaLink className="text-teal-400" /> 
+                                                                Meeting: <a href={session.meetingLink} target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">Link Set</a>
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className={`text-sm ${phaseColorClass} flex items-center gap-2 mt-1`}>
+                                                        <FaClock /> {countdownStr}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-3 mt-2">
-                                                <span className="flex items-center gap-1 text-sm text-gray-400">
-                                                    <FaUsers className="text-indigo-400" /> {session.currentParticipants} / {session.maxParticipants} students
-                                                </span>
+                                            <div className="flex flex-col gap-2 min-w-[180px]">
                                                 {session.meetingLink && (
-                                                    <a href={session.meetingLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sm text-teal-400 hover:underline">
+                                                    <a
+                                                        href={session.meetingLink}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className={`px-4 py-2 text-white text-sm font-bold rounded-lg transition-all text-center flex items-center justify-center gap-2 ${canJoin ? 'bg-gradient-to-r from-teal-500 to-indigo-600 hover:shadow-teal-500/25 cursor-pointer' : 'bg-gray-600 cursor-not-allowed opacity-50'}`}
+                                                        onClick={(e) => { if (!canJoin) e.preventDefault(); }}
+                                                    >
                                                         <FaLink /> Join Meeting
                                                     </a>
                                                 )}
+                                                <button
+                                                    onClick={() => handleFetchParticipants(session)}
+                                                    className="px-4 py-2 border border-indigo-500/30 hover:bg-indigo-500/10 text-indigo-400 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                                                >
+                                                    <FaUsers /> Participant List
+                                                </button>
+                                                {session.status !== 'cancelled' && sessionPhase === 'upcoming' && (
+                                                    <button
+                                                        onClick={() => openCancelSessionModal(session._id)}
+                                                        className="px-4 py-2 border border-red-500/50 hover:bg-red-500/10 text-red-400 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                                                    >
+                                                        <FaExclamationCircle /> Cancel Session
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
-                                        <div className="flex flex-col gap-2">
-                                            <button
-                                                onClick={() => handleFetchParticipants(session)}
-                                                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
-                                            >
-                                                <FaUsers /> View Participant List
-                                            </button>
-                                            {session.status !== 'cancelled' && (
-                                                <button
-                                                    onClick={() => openCancelSessionModal(session._id)}
-                                                    className="px-4 py-2 border border-red-500/50 hover:bg-red-500/10 text-red-400 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
-                                                >
-                                                    <FaExclamationCircle /> Cancel Session
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))
+                                    );
+                                })
                             )}
                         </div>
                     </div>

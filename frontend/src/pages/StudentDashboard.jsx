@@ -24,11 +24,28 @@ const MOCK_TUTORS = [
   { _id: '60d0fe4f5311236168a109cd', name: 'Taylor Coach' }
 ];
 
+const parseSessionTime = (dateStr, timeStr) => {
+  if (!dateStr || !timeStr || timeStr === 'N/A') return null;
+  const d = new Date(dateStr);
+  const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM|am|pm)?/);
+  if (!match) return null;
+  let [ , hours, minutes, ampm ] = match;
+  hours = parseInt(hours, 10);
+  minutes = parseInt(minutes, 10);
+  if (ampm) {
+    if (ampm.toLowerCase() === 'pm' && hours < 12) hours += 12;
+    if (ampm.toLowerCase() === 'am' && hours === 12) hours = 0;
+  }
+  d.setHours(hours, minutes, 0, 0);
+  return d;
+};
+
 const StudentDashboard = () => {
   const user = getCurrentUser();
   // Default to the first mock tutor (matches TutorDashboard ID so sessions line up)
   const [selectedTutorId, setSelectedTutorId] = useState(MOCK_TUTORS[0]._id);
   const [availabilitySlots, setAvailabilitySlots] = useState([]);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const [tutorSessions, setTutorSessions] = useState([]);
   const [studentBookings, setStudentBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
@@ -46,7 +63,11 @@ const StudentDashboard = () => {
     fetchNotifications();
 
     const interval = setInterval(fetchNotifications, 5000); // Poll every 5 seconds
-    return () => clearInterval(interval);
+    const timeInterval = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => {
+      clearInterval(interval);
+      clearInterval(timeInterval);
+    };
     // eslint-disable-next-line
   }, [selectedTutorId]);
 
@@ -322,84 +343,134 @@ const StudentDashboard = () => {
               ) : (
                 studentBookings.filter(b => b.status !== 'cancelled').map(booking => {
                   const dateLabel = new Date(booking.bookingDate).toLocaleDateString(undefined, {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric'
-                });
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                  });
 
-                const isUpcoming = booking.status === 'upcoming';
-                const startTime = booking.session ? booking.session.startTime : (booking.availability ? booking.availability.startTime : 'N/A');
-                const endTime = booking.session ? booking.session.endTime : (booking.availability ? booking.availability.endTime : 'N/A');
+                  const startTime = booking.session ? booking.session.startTime : (booking.availability ? booking.availability.startTime : 'N/A');
+                  const endTime = booking.session ? booking.session.endTime : (booking.availability ? booking.availability.endTime : 'N/A');
 
-                let statusClass = 'bg-teal-500/10 text-teal-300 border-teal-500/40';
-                let StatusIcon = FaCheckCircle;
+                  const startDateTime = parseSessionTime(booking.bookingDate, startTime);
+                  const endDateTime = parseSessionTime(booking.bookingDate, endTime);
+                  
+                  let sessionPhase = 'completed';
+                  if (startDateTime && endDateTime) {
+                    if (currentTime < startDateTime) sessionPhase = 'upcoming';
+                    else if (currentTime >= startDateTime && currentTime <= endDateTime) sessionPhase = 'ongoing';
+                  }
 
-                if (booking.status === 'completed') {
-                  statusClass = 'bg-indigo-500/10 text-indigo-300 border-indigo-500/40';
-                  StatusIcon = FaCheckCircle;
-                } else if (booking.status === 'cancelled') {
-                  statusClass = 'bg-red-500/10 text-red-300 border-red-500/40';
-                  StatusIcon = FaTimesCircle;
-                }
+                  let countdownStr = '';
+                  let phaseColorClass = '';
+                  if (sessionPhase === 'upcoming') {
+                    const diff = startDateTime - currentTime;
+                    const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                    const m = Math.floor((diff / 1000 / 60) % 60);
+                    const s = Math.floor((diff / 1000) % 60);
+                    let parts = [];
+                    if (d > 0) parts.push(`${d}d`);
+                    if (h > 0 || d > 0) parts.push(`${h}h`);
+                    if (m > 0 || h > 0 || d > 0) parts.push(`${m}m`);
+                    parts.push(`${s}s`);
+                    countdownStr = `Starts in ${parts.join(' ')}`;
+                    phaseColorClass = 'text-green-400 font-bold';
+                  } else if (sessionPhase === 'ongoing') {
+                    countdownStr = 'Session in Progress';
+                    phaseColorClass = 'text-yellow-400 font-bold';
+                  } else {
+                    countdownStr = 'Session Completed';
+                    phaseColorClass = 'text-gray-500 font-bold';
+                  }
 
-                return (
-                  <div
-                    key={booking._id}
-                    className="flex flex-col md:flex-row md:items-center md:justify-between p-5 bg-gray-800 rounded-2xl border border-gray-700 shadow-lg hover:border-gray-600 transition-all"
-                  >
-                    <div className="flex-1">
-                      <div className="flex flex-wrap items-center gap-3 mb-2">
-                        <span className="text-white font-bold text-lg flex items-center gap-2">
-                          <FaCalendarAlt className="text-teal-500" /> {dateLabel}
-                        </span>
-                        <span className="text-gray-500">|</span>
-                        <span className="text-gray-200 font-medium flex items-center gap-2">
-                          <FaClock className="text-teal-500" /> {startTime} - {endTime}
-                        </span>
-                        <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded-md border flex items-center gap-1 ${statusClass}`}>
-                          <StatusIcon size={10} /> {booking.status}
-                        </span>
-                      </div>
+                  let statusLabel = booking.status;
+                  let statusClass = 'bg-gray-500/10 text-gray-400 border-gray-500/40';
+                  let StatusIcon = FaCheckCircle;
 
-                      <div className="flex flex-wrap items-center gap-6 mt-3">
-                        <div className="text-sm text-gray-400 flex items-center gap-2">
-                          <FaUser className="text-indigo-400" />
-                          Tutor: <span className="text-gray-200 font-semibold">{booking.tutor?.name || 'N/A'}</span>
+                  if (booking.status === 'cancelled') {
+                    statusClass = 'bg-red-500/10 text-red-300 border-red-500/40';
+                    StatusIcon = FaTimesCircle;
+                  } else if (sessionPhase === 'upcoming') {
+                    statusLabel = 'upcoming';
+                    statusClass = 'bg-green-500/10 text-green-400 border-green-500/40';
+                    StatusIcon = FaCheckCircle;
+                  } else if (sessionPhase === 'ongoing') {
+                    statusLabel = 'in progress';
+                    statusClass = 'bg-yellow-500/10 text-yellow-400 border-yellow-500/40';
+                    StatusIcon = FaExclamationCircle;
+                  } else {
+                    statusLabel = 'completed';
+                    statusClass = 'bg-gray-500/10 text-gray-400 border-gray-500/40';
+                    StatusIcon = FaCheckCircle;
+                  }
+
+                  const canJoin = startDateTime && endDateTime && (currentTime >= new Date(startDateTime.getTime() - 10 * 60000) && currentTime <= endDateTime);
+
+                  return (
+                    <div
+                      key={booking._id}
+                      className="flex flex-col md:flex-row md:items-center md:justify-between p-5 bg-gray-800 rounded-2xl border border-gray-700 shadow-lg hover:border-gray-600 transition-all"
+                    >
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-3 mb-2">
+                          <span className="text-white font-bold text-lg flex items-center gap-2">
+                            <FaCalendarAlt className="text-teal-500" /> {dateLabel}
+                          </span>
+                          <span className="text-gray-500">|</span>
+                          <span className="text-gray-200 font-medium flex items-center gap-2">
+                            <FaClock className="text-teal-500" /> {startTime} - {endTime}
+                          </span>
+                          <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded-md border flex items-center gap-1 ${statusClass}`}>
+                            <StatusIcon size={10} /> {statusLabel}
+                          </span>
                         </div>
 
-                        {isUpcoming && booking.meetingLink && (
+                        <div className="flex flex-wrap items-center gap-6 mt-3">
                           <div className="text-sm text-gray-400 flex items-center gap-2">
-                            <FaLink className="text-teal-400" />
-                            Meeting: <a href={booking.meetingLink} target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline font-medium">Join Jitsi Meet</a>
+                            <FaUser className="text-indigo-400" />
+                            Tutor: <span className="text-gray-200 font-semibold">{booking.tutor?.name || 'N/A'}</span>
                           </div>
+
+                          {booking.meetingLink && (
+                            <div className="text-sm text-gray-400 flex items-center gap-2">
+                              <FaLink className="text-teal-400" />
+                              Meeting: <a href={booking.meetingLink} target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline font-medium">Join Jitsi Meet</a>
+                            </div>
+                          )}
+                          
+                          {booking.status !== 'cancelled' && (
+                            <div className={`text-sm ${phaseColorClass} flex items-center gap-2`}>
+                              <FaClock /> {countdownStr}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
+                        {booking.meetingLink && (
+                          <a
+                            href={booking.meetingLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`flex-1 md:flex-none px-6 py-2 text-white text-sm font-bold rounded-xl shadow-lg transition-all text-center flex items-center justify-center gap-2 ${canJoin ? 'bg-gradient-to-r from-teal-500 to-indigo-600 hover:shadow-teal-500/25 cursor-pointer' : 'bg-gray-600 cursor-not-allowed opacity-50'}`}
+                            onClick={(e) => { if (!canJoin) e.preventDefault(); }}
+                          >
+                            <FaLink /> Join Meeting
+                          </a>
+                        )}
+                        {sessionPhase === 'upcoming' && booking.status !== 'cancelled' && (
+                          <button
+                            onClick={() => openCancelModal(booking._id)}
+                            className="flex-1 md:flex-none px-4 py-2 rounded-xl border border-red-500/50 text-red-400 text-sm font-medium hover:bg-red-500/10 transition-colors"
+                          >
+                            Cancel Booking
+                          </button>
                         )}
                       </div>
                     </div>
-
-                    <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
-                      {isUpcoming && booking.meetingLink && (
-                        <a
-                          href={booking.meetingLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 md:flex-none px-6 py-2 bg-gradient-to-r from-teal-500 to-indigo-600 text-white text-sm font-bold rounded-xl shadow-lg hover:shadow-teal-500/25 transition-all text-center flex items-center justify-center gap-2"
-                        >
-                          <FaLink /> Join Meeting
-                        </a>
-                      )}
-                      {isUpcoming && (
-                        <button
-                          onClick={() => openCancelModal(booking._id)}
-                          className="flex-1 md:flex-none px-4 py-2 rounded-xl border border-red-500/50 text-red-400 text-sm font-medium hover:bg-red-500/10 transition-colors"
-                        >
-                          Cancel Booking
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
+                  );
+                })
               )}
             </div>
           )}
