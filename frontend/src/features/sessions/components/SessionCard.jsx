@@ -1,13 +1,36 @@
 import React, { useState } from 'react';
 
+const parseSessionTime = (dateStr, timeStr) => {
+    if (!dateStr || !timeStr || timeStr === 'N/A') return null;
+    const d = new Date(dateStr);
+    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM|am|pm)?/);
+    if (!match) return null;
+    let [ , hours, minutes, ampm ] = match;
+    hours = parseInt(hours, 10);
+    minutes = parseInt(minutes, 10);
+    if (ampm) {
+        if (ampm.toLowerCase() === 'pm' && hours < 12) hours += 12;
+        if (ampm.toLowerCase() === 'am' && hours === 12) hours = 0;
+    }
+    d.setHours(hours, minutes, 0, 0);
+    return d;
+};
+
 const SessionCard = ({ session, onViewDetails }) => {
     const [isHovered, setIsHovered] = useState(false);
 
     const now = new Date();
-    const dateString = session.date.split('T')[0];
-    const sessionDateTime = new Date(`${dateString}T${session.startTime}`);
+    const sessionEndDateTime = parseSessionTime(session.date, session.endTime);
+    
+    let isPast = false;
+    if (sessionEndDateTime) {
+        isPast = sessionEndDateTime < now;
+    } else {
+        const dateString = session.date.split('T')[0];
+        const fallbackEndDateTime = new Date(`${dateString}T${session.endTime}`);
+        isPast = fallbackEndDateTime < now;
+    }
 
-    const isPast = sessionDateTime < now;
     const isFull = session.currentParticipants >= session.maxParticipants;
 
     const isAvailable = !isPast && !isFull;

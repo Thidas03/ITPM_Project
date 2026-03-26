@@ -488,7 +488,8 @@ const TutorScheduleManager = ({ tutorId }) => {
                                     <div className="space-y-4">
                                         {selectedDateSessions.map(session => {
                                             const isFull = session.currentParticipants >= session.maxParticipants;
-                                            const isExpired = new Date(session.date).setHours(23, 59, 59, 999) < new Date().getTime();
+                                            const endDateTime = parseSessionTime(session.date, session.endTime);
+                                            const isExpired = endDateTime ? endDateTime < new Date() : new Date(session.date).setHours(23, 59, 59, 999) < new Date().getTime();
 
                                             let statusLabel = 'Available';
                                             let statusClass = 'bg-teal-900/50 text-teal-300 border-teal-700';
