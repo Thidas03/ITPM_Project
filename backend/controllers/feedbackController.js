@@ -1,13 +1,21 @@
 const Feedback = require("../models/Feedback");
 
+// Submit new feedback
 const createFeedback = async (req, res) => {
   try {
     const { sessionId, studentId, tutorId, rating, comment, category } = req.body;
 
     if (!sessionId || !studentId || !tutorId || !rating || !comment) {
       return res.status(400).json({
-        success: false,
-        message: "Session ID, Student ID, Tutor ID, Rating and Comment are required",
+        message: "All required fields must be filled",
+      });
+    }
+
+    const existingFeedback = await Feedback.findOne({ sessionId, studentId });
+
+    if (existingFeedback) {
+      return res.status(400).json({
+        message: "Feedback already submitted for this session",
       });
     }
 
@@ -20,71 +28,71 @@ const createFeedback = async (req, res) => {
       category,
     });
 
-    const savedFeedback = await newFeedback.save();
+    await newFeedback.save();
 
     res.status(201).json({
-      success: true,
       message: "Feedback submitted successfully",
-      data: savedFeedback,
+      feedback: newFeedback,
     });
   } catch (error) {
     res.status(500).json({
-      success: false,
-      message: "Failed to create feedback",
+      message: "Failed to submit feedback",
       error: error.message,
     });
   }
 };
 
+// Admin view: get all feedback
 const getAllFeedback = async (req, res) => {
   try {
-    const feedbackList = await Feedback.find().sort({ createdAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      count: feedbackList.length,
-      data: feedbackList,
-    });
+    const allFeedback = await Feedback.find().sort({ createdAt: -1 });
+    res.status(200).json(allFeedback);
   } catch (error) {
     res.status(500).json({
-      success: false,
-      message: "Failed to fetch feedback",
+      message: "Failed to fetch all feedback",
       error: error.message,
     });
   }
 };
 
-const getFeedbackByTutor = async (req, res) => {
+// Tutor view: anonymous feedback only
+const getTutorFeedback = async (req, res) => {
   try {
-    const tutorId = req.params.tutorId.trim();
+    const { tutorId } = req.params;
 
-    // CHANGED: case-insensitive exact match after trimming
-    const feedbackList = await Feedback.find({
-      tutorId: { $regex: `^${tutorId}$`, $options: "i" },
-    }).sort({ createdAt: -1 });
+    if (!tutorId) {
+      return res.status(400).json({
+        message: "Tutor ID is required",
+      });
+    }
 
-    res.status(200).json({
-      success: true,
-      count: feedbackList.length,
-      data: feedbackList,
-    });
+    const feedbackList = await Feedback.find({ tutorId })
+      .select("sessionId rating comment category createdAt status")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(feedbackList);
   } catch (error) {
     res.status(500).json({
-      success: false,
-      message: "Failed to fetch tutor reviews",
+      message: "Failed to fetch tutor feedback",
       error: error.message,
     });
   }
 };
 
+// Update feedback status
 const updateFeedbackStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!["Pending", "Reviewed", "Resolved"].includes(status)) {
+    if (!status) {
       return res.status(400).json({
-        success: false,
+        message: "Status is required",
+      });
+    }
+
+    if (!["approved", "hidden", "flagged"].includes(status)) {
+      return res.status(400).json({
         message: "Invalid status value",
       });
     }
@@ -97,25 +105,23 @@ const updateFeedbackStatus = async (req, res) => {
 
     if (!updatedFeedback) {
       return res.status(404).json({
-        success: false,
         message: "Feedback not found",
       });
     }
 
     res.status(200).json({
-      success: true,
       message: "Feedback status updated successfully",
-      data: updatedFeedback,
+      feedback: updatedFeedback,
     });
   } catch (error) {
     res.status(500).json({
-      success: false,
       message: "Failed to update feedback status",
       error: error.message,
     });
   }
 };
 
+// Delete feedback
 const deleteFeedback = async (req, res) => {
   try {
     const { id } = req.params;
@@ -124,18 +130,15 @@ const deleteFeedback = async (req, res) => {
 
     if (!deletedFeedback) {
       return res.status(404).json({
-        success: false,
         message: "Feedback not found",
       });
     }
 
     res.status(200).json({
-      success: true,
       message: "Feedback deleted successfully",
     });
   } catch (error) {
     res.status(500).json({
-      success: false,
       message: "Failed to delete feedback",
       error: error.message,
     });
@@ -145,7 +148,7 @@ const deleteFeedback = async (req, res) => {
 module.exports = {
   createFeedback,
   getAllFeedback,
-  getFeedbackByTutor,
+  getTutorFeedback,
   updateFeedbackStatus,
   deleteFeedback,
 };
