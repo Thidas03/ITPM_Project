@@ -1,31 +1,33 @@
 // frontend/src/services/feedbackService.js
 
-import axios from "axios";
+import api from "./api";
 
-// CHANGED: Centralized API base URL for feedback module
-const API_BASE_URL = "http://localhost:5000/api/feedback";
-
+// Create feedback
 export const createFeedback = async (feedbackData) => {
-  const response = await axios.post(API_BASE_URL, feedbackData);
+  const response = await api.post("/feedback", feedbackData);
   return response.data;
 };
 
+// Get all feedback for admin
 export const getAllFeedback = async () => {
-  const response = await axios.get(API_BASE_URL);
+  const response = await api.get("/feedback");
   return response.data;
 };
 
+// Get anonymous feedback by tutor ID
 export const getFeedbackByTutor = async (tutorId) => {
-  const response = await axios.get(`${API_BASE_URL}/tutor/${tutorId}`);
+  const response = await api.get(`/feedback/tutor/${tutorId}`);
   return response.data;
 };
 
+// Update feedback status
 export const updateFeedbackStatus = async (id, status) => {
-  const response = await axios.put(`${API_BASE_URL}/${id}`, { status });
+  const response = await api.put(`/feedback/${id}`, { status });
   return response.data;
 };
 
+// Delete feedback
 export const deleteFeedback = async (id) => {
-  const response = await axios.delete(`${API_BASE_URL}/${id}`);
+  const response = await api.delete(`/feedback/${id}`);
   return response.data;
 };
