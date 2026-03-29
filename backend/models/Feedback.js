@@ -4,46 +4,44 @@ const feedbackSchema = new mongoose.Schema(
   {
     sessionId: {
       type: String,
-      required: [true, "Session ID is required"],
+      required: true,
       trim: true,
     },
     studentId: {
       type: String,
-      required: [true, "Student ID is required"],
+      required: true,
       trim: true,
     },
     tutorId: {
       type: String,
-      required: [true, "Tutor ID is required"],
+      required: true,
       trim: true,
     },
     rating: {
       type: Number,
-      required: [true, "Rating is required"],
-      min: [1, "Rating must be at least 1"],
-      max: [5, "Rating cannot exceed 5"],
+      required: true,
+      min: 1,
+      max: 5,
     },
     comment: {
       type: String,
-      required: [true, "Comment is required"],
+      required: true,
       trim: true,
-      minlength: [5, "Comment must be at least 5 characters"],
-      maxlength: [500, "Comment cannot exceed 500 characters"],
+      minlength: 5,
+      maxlength: 1000,
     },
     category: {
       type: String,
-      trim: true,
       default: "General",
+      enum: ["General", "Teaching Quality", "Communication", "Punctuality"],
     },
     status: {
       type: String,
-      enum: ["Pending", "Reviewed", "Resolved"],
-      default: "Pending",
+      enum: ["approved", "hidden", "flagged"],
+      default: "approved",
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("Feedback", feedbackSchema);
