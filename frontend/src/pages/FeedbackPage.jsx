@@ -17,7 +17,6 @@ const FeedbackPage = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [serverError, setServerError] = useState("");
 
-  // CHANGED: Frontend validation for Progress 1
   const validateForm = () => {
     const newErrors = {};
 
@@ -41,7 +40,6 @@ const FeedbackPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // CHANGED: Generic input handler
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -50,7 +48,6 @@ const FeedbackPage = () => {
     }));
   };
 
-  // CHANGED: Fill Demo Data button
   const handleFillDemoData = () => {
     setFormData({
       sessionId: "SES-101",

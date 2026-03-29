@@ -1,44 +1,41 @@
-// frontend/src/pages/TutorReviewsPage.jsx
-
 import React, { useState } from "react";
 import { getFeedbackByTutor } from "../services/feedbackService";
 
-const TutorReviewsPage = () => {
+const MyReviewsPage = () => {
   const [tutorId, setTutorId] = useState("");
   const [reviews, setReviews] = useState([]);
   const [error, setError] = useState("");
-  const [hasSearched, setHasSearched] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
 
-  const handleFillDemoTutor = () => {
-    setTutorId("TUT-450");
-    setError("");
-  };
-
-  const handleSearch = async () => {
+  const handleLoadMyReviews = async () => {
     const trimmedTutorId = tutorId.trim();
 
     if (!trimmedTutorId) {
       setError("Tutor ID is required");
       setReviews([]);
-      setHasSearched(false);
+      setSearched(false);
       return;
     }
 
     try {
       setLoading(true);
       setError("");
-      setHasSearched(true);
+      setSearched(true);
 
       const data = await getFeedbackByTutor(trimmedTutorId);
       setReviews(data || []);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to fetch tutor reviews");
+      setError(err.response?.data?.message || "Failed to load your reviews");
       setReviews([]);
-      setHasSearched(true);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFillDemoTutor = () => {
+    setTutorId("TUT-450");
+    setError("");
   };
 
   const averageRating =
@@ -50,9 +47,9 @@ const TutorReviewsPage = () => {
     <div className="min-h-screen bg-gray-900 px-4 py-10">
       <div className="mx-auto max-w-5xl">
         <div className="mb-8 rounded-2xl border border-gray-700 bg-gray-800 p-8 shadow-2xl">
-          <h1 className="text-3xl font-bold text-gray-300">Tutor Reviews</h1>
+          <h1 className="text-3xl font-bold text-gray-300">My Reviews</h1>
           <p className="mt-2 text-gray-400">
-            Search anonymous reviews for a tutor using the tutor ID.
+            Tutors can view anonymous feedback submitted by students.
           </p>
 
           <div className="mt-6 flex flex-col gap-3 md:flex-row">
@@ -60,15 +57,15 @@ const TutorReviewsPage = () => {
               type="text"
               value={tutorId}
               onChange={(e) => setTutorId(e.target.value)}
-              placeholder="Enter Tutor ID"
+              placeholder="Enter Your Tutor ID"
               className="flex-1 rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-gray-300 placeholder-gray-500 outline-none focus:border-teal-500"
             />
             <button
               type="button"
-              onClick={handleSearch}
+              onClick={handleLoadMyReviews}
               className="rounded-lg bg-gradient-to-r from-teal-500 to-indigo-600 px-5 py-3 font-medium text-white shadow-lg transition hover:scale-[1.02]"
             >
-              Search
+              View My Reviews
             </button>
             <button
               type="button"
@@ -100,9 +97,9 @@ const TutorReviewsPage = () => {
         )}
 
         <div className="grid gap-5">
-          {!hasSearched ? (
+          {!searched ? (
             <div className="rounded-2xl border border-gray-700 bg-gray-800 p-8 text-center text-gray-400 shadow-xl">
-              Enter a Tutor ID and click Search to view reviews.
+              Enter your Tutor ID and click View My Reviews.
             </div>
           ) : loading ? (
             <div className="rounded-2xl border border-teal-500/20 bg-teal-500/10 p-8 text-center text-gray-300 shadow-xl">
@@ -151,4 +148,4 @@ const TutorReviewsPage = () => {
   );
 };
 
-export default TutorReviewsPage;
+export default MyReviewsPage;
