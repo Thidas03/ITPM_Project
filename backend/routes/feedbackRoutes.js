@@ -4,15 +4,24 @@ const router = express.Router();
 const {
   createFeedback,
   getAllFeedback,
-  getFeedbackByTutor,
+  getTutorFeedback,
   updateFeedbackStatus,
   deleteFeedback,
 } = require("../controllers/feedbackController");
 
+// Submit feedback
 router.post("/", createFeedback);
+
+// Admin view
 router.get("/", getAllFeedback);
-router.get("/tutor/:tutorId", getFeedbackByTutor);
+
+// Tutor view
+router.get("/tutor/:tutorId", getTutorFeedback);
+
+// Update feedback status
 router.put("/:id", updateFeedbackStatus);
+
+// Delete feedback
 router.delete("/:id", deleteFeedback);
 
 module.exports = router;
