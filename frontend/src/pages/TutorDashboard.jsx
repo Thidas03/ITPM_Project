@@ -112,9 +112,26 @@ const TutorDashboard = () => {
         </div>
       </nav>
 
-      {/* Tutor schedule manager */}
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        <TutorScheduleManager tutorId={user._id} />
+      {/* Main Content Area */}
+      <main className="max-w-7xl mx-auto px-6 py-10 space-y-12">
+        {/* Tutor schedule manager */}
+        <section>
+          <TutorScheduleManager tutorId={user._id} />
+        </section>
+
+        {/* Student Feedback Section (Placeholder) */}
+        <section className="bg-gray-800 rounded-3xl p-6 md:p-8 border border-gray-700 shadow-xl">
+          <h2 className="text-2xl font-bold mb-6 text-white flex items-center gap-3">
+            <svg className="w-6 h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+            Student Feedback
+          </h2>
+          <div className="text-center py-12 bg-gray-900/50 rounded-2xl border border-gray-700 border-dashed">
+            <p className="text-gray-400 text-lg">No feedback received yet.</p>
+            <p className="text-gray-500 text-sm mt-2">Feedback from your completed sessions will appear here.</p>
+          </div>
+        </section>
       </main>
     </div>
   );

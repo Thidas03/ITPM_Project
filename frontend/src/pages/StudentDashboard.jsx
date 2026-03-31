@@ -467,6 +467,13 @@ const StudentDashboard = () => {
                             Cancel Booking
                           </button>
                         )}
+                        {sessionPhase === 'completed' && booking.status !== 'cancelled' && (
+                          <button
+                            className="flex-1 md:flex-none px-4 py-2 rounded-xl border border-blue-500/50 text-blue-400 text-sm font-medium hover:bg-blue-500/10 transition-colors"
+                          >
+                            Give Feedback
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
