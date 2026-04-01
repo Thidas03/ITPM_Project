@@ -14,7 +14,8 @@ const {
     verifyRegistrationOTP,
     verify2FA,
     toggle2FA,
-    requestHostRole
+    requestHostRole,
+    changePassword
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -28,6 +29,7 @@ router.post('/reset-password', resetPassword);
 router.post('/verify-registration-otp', verifyRegistrationOTP);
 router.post('/verify-2fa', verify2FA);
 router.post('/toggle-2fa', protect, toggle2FA);
+router.post('/change-password', protect, changePassword);
 router.get('/profile/trust', protect, getTrustProfile);
 router.get('/profile', protect, getUserProfile);
 router.put('/profile', protect, updateUserProfile);

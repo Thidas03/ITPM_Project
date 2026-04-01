@@ -435,6 +435,39 @@ exports.toggle2FA = async (req, res) => {
     }
 };
 
+// @desc    Change password
+// @route   POST /api/auth/change-password
+// @access  Private
+exports.changePassword = async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+
+    // Password Strength Check
+    const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordStrengthRegex.test(newPassword)) {
+        return res.status(400).json({ message: 'Password must contain at least 8 characters, one uppercase, one lowercase, one number, and one special character.' });
+    }
+
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const isMatch = await user.comparePassword(currentPassword);
+        if (!isMatch) {
+            return res.status(401).json({ message: 'Incorrect current password' });
+        }
+
+        user.password = newPassword;
+        await user.save();
+
+        res.json({
+            success: true,
+            message: 'Password updated successfully'
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 // @desc    Request Host Role Upgrade
 // @route   POST /api/auth/request-host
 // @access  Private
