@@ -1,8 +1,11 @@
-import React from 'react';
-import axios from 'axios';
+import React, { useState } from 'react';
 import { Check, X } from 'lucide-react';
+import CheckoutModal from './CheckoutModal';
 
 const Pricing = () => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState(null);
+
     const sessions = [
         {
             id: 'session_math_101',
@@ -51,23 +54,9 @@ const Pricing = () => {
         }
     ];
 
-    const handleSessionPayment = async (priceId, sessionId) => {
-        try {
-            const userId = 'placeholder_user_id';
-
-            const response = await axios.post('http://localhost:5000/api/stripe/create-checkout-session', {
-                userId,
-                priceId,
-                sessionId
-            });
-
-            if (response.data.url) {
-                window.location.href = response.data.url;
-            }
-        } catch (error) {
-            console.error('Payment error:', error);
-            alert('Failed to initiate checkout. Please try again.');
-        }
+    const handleOpenCheckout = (item) => {
+        setSelectedItem(item);
+        setIsModalOpen(true);
     };
 
     return (
@@ -102,7 +91,7 @@ const Pricing = () => {
 
                         <button
                             className={`btn ${session.isPremium ? 'btn-primary' : 'btn-secondary'}`}
-                            onClick={() => handleSessionPayment(session.priceId, session.id)}
+                            onClick={() => handleOpenCheckout(session)}
                         >
                             Pay & Register
                         </button>
@@ -130,13 +119,19 @@ const Pricing = () => {
 
                         <button
                             className="btn btn-primary"
-                            onClick={() => handleSessionPayment(bundle.priceId, bundle.id)}
+                            onClick={() => handleOpenCheckout(bundle)}
                         >
                             Buy Bundle
                         </button>
                     </div>
                 ))}
             </div>
+
+            <CheckoutModal 
+                isOpen={isModalOpen} 
+                onClose={() => setIsModalOpen(false)} 
+                selectedItem={selectedItem} 
+            />
         </div>
     );
 };

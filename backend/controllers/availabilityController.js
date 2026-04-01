@@ -1,8 +1,5 @@
 const Availability = require('../models/Availability');
 
-// @desc    Create availability
-// @route   POST /api/availability
-// @access  Public (for now)
 exports.createAvailability = async (req, res) => {
     try {
         const { tutor, dayOfWeek, startTime, endTime } = req.body;
@@ -27,21 +24,26 @@ exports.createAvailability = async (req, res) => {
     }
 };
 
-
-// @desc    Get availability by tutor
-// @route   GET /api/availability/:tutorId
-// @access  Public
 exports.getAvailabilityByTutor = async (req, res) => {
     try {
+        const { studentId } = req.query;
         const availability = await Availability.find({
             tutor: req.params.tutorId,
-            isBooked: false
+            $expr: { $lt: [{ $size: "$enrolledStudents" }, "$maxStudents"] }
+        });
+
+        const formattedData = availability.map(slot => {
+            const isBooked = studentId ? slot.enrolledStudents.includes(studentId) : false;
+            return {
+                ...slot._doc,
+                isBookedByMe: isBooked
+            };
         });
 
         res.status(200).json({
             success: true,
-            count: availability.length,
-            data: availability
+            count: formattedData.length,
+            data: formattedData
         });
 
     } catch (error) {

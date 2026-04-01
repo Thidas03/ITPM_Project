@@ -1,8 +1,10 @@
 const express = require('express');
+const { check, validationResult } = require('express-validator');
 const router = express.Router();
 const stripe = require('stripe')(process.argv[2] || process.env.STRIPE_SECRET_KEY);
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
+const Availability = require('../models/Availability');
 const { sendSessionConfirmation } = require('../services/emailService');
 
 // MOCK: In a real app, these would come from a Session/Class model in the database
@@ -31,13 +33,55 @@ const SESSION_DATA = {
     }
 };
 
+// Middleware to handle validation errors
+const validate = (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ success: false, errors: errors.array() });
+    }
+    next();
+};
+
 // Create a Checkout Session for a single session/class or bundle
-router.post('/create-checkout-session', async (req, res) => {
-    const { userId, priceId, sessionId } = req.body;
+router.post(
+    '/create-checkout-session',
+    [
+        check('userId', 'User ID is required').not().isEmpty(),
+        check('priceId', 'Price ID is required').not().isEmpty(),
+        check('sessionId', 'Session ID is required').not().isEmpty(),
+        check('availabilityId', 'Availability ID is required').not().isEmpty(),
+        validate
+    ],
+    async (req, res) => {
+    const { userId, priceId, sessionId, availabilityId } = req.body;
 
     try {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
+
+        // 1. Check Tutor Availability (Capacity)
+        const availability = await Availability.findById(availabilityId);
+        if (!availability) return res.status(404).json({ message: 'Availability slot not found' });
+
+        if (availability.enrolledStudents.length >= availability.maxStudents) {
+            return res.status(400).json({ message: 'This session is already full' });
+        }
+
+        // 2. Check Student Availability (Overlap Check)
+        // Find all sessions this student is already enrolled in
+        const existingSessions = await Availability.find({
+            enrolledStudents: userId,
+            dayOfWeek: availability.dayOfWeek
+        });
+
+        const hasOverlap = existingSessions.some(existing => {
+            // Simple overlap check (HH:mm string comparison)
+            return (availability.startTime < existing.endTime && availability.endTime > existing.startTime);
+        });
+
+        if (hasOverlap) {
+            return res.status(400).json({ message: 'You are already booked for another session at this time' });
+        }
 
         const session = await stripe.checkout.sessions.create({
             mode: 'payment',
@@ -56,6 +100,7 @@ router.post('/create-checkout-session', async (req, res) => {
             metadata: {
                 userId: userId,
                 sessionId: sessionId,
+                availabilityId: availabilityId
             },
         });
 
@@ -115,9 +160,17 @@ async function handleSessionPaymentSuccess(session) {
             return;
         }
 
+        const availabilityId = session.metadata.availabilityId;
+
+        // Update User's paid sessions
         await User.findByIdAndUpdate(userId, {
             stripeCustomerId: stripeCustomerId,
             $addToSet: { paidSessions: sessionId }
+        });
+
+        // Register student in the Availability slot
+        await Availability.findByIdAndUpdate(availabilityId, {
+            $addToSet: { enrolledStudents: userId }
         });
 
         // Send Email Notification

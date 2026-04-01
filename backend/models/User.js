@@ -25,6 +25,24 @@ const UserSchema = new mongoose.Schema({
         minlength: 6,
         select: false
     },
+    stripeCustomerId: {
+        type: String,
+        default: null
+    },
+    paidSessions: {
+        type: [String],
+        default: []
+    },
+    subscriptionStatus: {
+        type: String,
+        enum: ['none', 'active', 'canceled'],
+        default: 'none'
+    },
+    subscriptionTier: {
+        type: String,
+        enum: ['free', 'premium'],
+        default: 'free'
+    },
     createdAt: {
         type: Date,
         default: Date.now
