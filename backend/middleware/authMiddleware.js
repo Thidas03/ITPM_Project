@@ -18,21 +18,25 @@ const protect = async (req, res, next) => {
             // Get user from the token
             req.user = await User.findById(decoded.id).select('-password');
 
+            if (!req.user) {
+                return res.status(401).json({ message: 'Not authorized, user not found' });
+            }
+
             next();
         } catch (error) {
             console.error(error);
-            res.status(401).json({ message: 'Not authorized, token failed' });
+            return res.status(401).json({ message: 'Not authorized, token failed' });
         }
     }
 
     if (!token) {
-        res.status(401).json({ message: 'Not authorized, no token' });
+        return res.status(401).json({ message: 'Not authorized, no token' });
     }
 };
 
 // Admin middleware
 const admin = (req, res, next) => {
-    if (req.user && req.user.role === 'Admin') {
+    if (req.user && (req.user.role === 'Admin' || req.user.role?.toLowerCase() === 'admin')) {
         next();
     } else {
         res.status(401).json({ message: 'Not authorized as an admin' });

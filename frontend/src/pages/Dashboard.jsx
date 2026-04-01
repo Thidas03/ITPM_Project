@@ -8,6 +8,7 @@ import { getTutorSessions } from '../features/sessions/services/sessionService';
 
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import NotificationDropdown from '../components/NotificationDropdown';
 
 const Dashboard = () => {
     const { user, logout } = useAuth();
@@ -79,6 +80,8 @@ const Dashboard = () => {
                         {user?.role === 'Admin' && (
                             <Link to="/admin" className="px-4 py-1.5 bg-slate-800 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-700 transition">Admin Panel</Link>
                         )}
+                        <Link to={user.role === 'Admin' ? "/admin/history" : "/my-sessions"} className="px-4 py-1.5 bg-gray-900 border border-gray-700 text-gray-300 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-teal-500/10 hover:text-teal-400 transition">My History</Link>
+                        <Link to="/profile" className="px-4 py-1.5 bg-gray-900 border border-gray-700 text-teal-400 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-teal-500/10 transition">Settings</Link>
                         {trustProfile && (
                             <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-teal-500/10 rounded-full border border-gray-700">
                                 <span className={`w-2 h-2 rounded-full ${trustProfile.trustLevel === 'High' ? 'bg-gradient-to-r from-amber-500 to-orange-600' :
@@ -95,7 +98,7 @@ const Dashboard = () => {
                         )}
                         <Link to="/profile" className="flex items-center gap-3 group">
                             <div className="flex flex-col items-end group-hover:opacity-80 transition">
-                                <span className="text-gray-300 font-bold group-hover:text-teal-500 transition leading-none mb-1">{user.firstName} {user.lastName}</span>
+                                <span className="text-gray-300 font-bold group-hover:text-teal-500 transition leading-none mb-1">{user.firstName} {user.lastName} <span className="text-xs text-teal-400 opacity-70 ml-1">#{user.identityNumber || 'N/A'}</span></span>
                                 <div className="flex items-center gap-1.5">
                                     <div className="w-16 h-1 w-full bg-gray-800 rounded-full overflow-hidden">
                                         <div
@@ -114,6 +117,7 @@ const Dashboard = () => {
                                 )}
                             </div>
                         </Link>
+                        <NotificationDropdown />
                         <button
                             onClick={handleLogout}
                             className="text-gray-400 hover:text-teal-400 text-sm font-medium transition flex items-center gap-2 border border-gray-700 px-4 py-2 rounded-xl hover:bg-teal-500/10"

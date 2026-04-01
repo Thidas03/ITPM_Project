@@ -51,14 +51,10 @@ const Profile = () => {
                         role: data.user.role,
                         badges: data.user.badges || [],
                         is2FAEnabled: data.user.is2FAEnabled,
-                        notificationPreferences: data.user.notificationPreferences || {
-                            email: true,
-                            sms: false,
-                            push: true
-                        },
                         tutorRequestStatus: data.user.tutorRequestStatus || 'none',
                         misconductCount: data.user.misconductCount || 0,
-                        averageRating: data.user.averageRating || 5.0
+                        averageRating: data.user.averageRating || 5.0,
+                        identityNumber: data.user.identityNumber
                     });
                 }
 
@@ -78,13 +74,7 @@ const Profile = () => {
 
     const onChange = (e) => {
         const { name, value, type, checked } = e.target;
-        if (name.startsWith('notif_')) {
-            const prefs = { ...formData.notificationPreferences };
-            prefs[name.replace('notif_', '')] = checked;
-            setFormData({ ...formData, notificationPreferences: prefs });
-        } else {
-            setFormData({ ...formData, [name]: value });
-        }
+        setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     };
 
     const handleFileChange = (e) => {
@@ -106,6 +96,7 @@ const Profile = () => {
             if (data.success) {
                 toast.success('Profile updated successfully!');
                 updateProfile(data.user); // Update Global State
+                setFormData(prev => ({ ...prev, ...data.user })); // Sync local state
                 setIsEditing(false); // Switch back to view mode
             }
         } catch (error) {
@@ -333,23 +324,41 @@ const Profile = () => {
 
                                     {!isEditing ? (
                                         // View Mode: Display Info
-                                        <div className="space-y-6">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                                <div className="p-4 bg-teal-500/10/50 rounded-2xl border border-gray-700/50">
+                                        <div className="space-y-8">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div className="p-4 bg-teal-500/10 rounded-2xl border border-gray-700/50">
                                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Full Name</p>
                                                     <p className="text-lg font-bold text-gray-300">{formData.firstName} {formData.lastName}</p>
                                                 </div>
-                                                <div className="p-4 bg-teal-500/10/50 rounded-2xl border border-gray-700/50">
+                                                <div className="p-4 bg-teal-500/10 rounded-2xl border border-gray-700/50">
                                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Email Address</p>
                                                     <p className="text-lg font-bold text-gray-300">{formData.email}</p>
                                                 </div>
-                                                <div className="p-4 bg-teal-500/10/50 rounded-2xl border border-gray-700/50">
+                                                <div className="p-4 bg-teal-500/10 rounded-2xl border border-gray-700/50">
                                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Contact Number</p>
                                                     <p className="text-lg font-bold text-gray-300">{formData.contactNumber || 'Not provided'}</p>
                                                 </div>
-                                                <div className="p-4 bg-teal-500/10/50 rounded-2xl border border-gray-700/50">
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Account Role</p>
-                                                    <p className="text-lg font-bold text-teal-400">{formData.role || 'User'}</p>
+                                                <div className="p-4 bg-teal-500/10 rounded-2xl border border-gray-700/50">
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Identity #</p>
+                                                    <p className="text-lg font-bold text-teal-400">#{formData.identityNumber || 'N/A'}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Simplified Notification Link */}
+                                            <div className="pt-8 border-t border-gray-700/50">
+                                                <div className="p-6 bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl border border-gray-700 shadow-lg flex items-center justify-between group hover:border-teal-500/50 transition">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 bg-teal-500/10 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition">
+                                                            🔔
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="text-sm font-black text-white uppercase tracking-widest">Notification Alerts</h3>
+                                                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Manage email, SMS, and timing</p>
+                                                        </div>
+                                                    </div>
+                                                    <Link to="/notification-preferences" className="px-6 py-2 bg-gray-900 border border-teal-500/30 text-teal-400 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-teal-500 hover:text-white transition shadow-lg">
+                                                        Configure &rarr;
+                                                    </Link>
                                                 </div>
                                             </div>
 
@@ -359,94 +368,41 @@ const Profile = () => {
                                                     onClick={() => setIsEditing(true)}
                                                     className="px-8 py-3 bg-gradient-to-r from-teal-500 to-indigo-600 hover:from-teal-400 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg transition transform hover:-translate-y-0.5"
                                                 >
-                                                    Edit Profile Details
+                                                    Edit Profile
                                                 </button>
                                             </div>
                                         </div>
                                     ) : (
                                         // Edit Mode: Display Form
-                                        <>
+                                        <div className="space-y-10">
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-400 mb-2">First Name</label>
-                                                    <input
-                                                        type="text"
-                                                        name="firstName"
-                                                        value={formData.firstName}
-                                                        onChange={onChange}
-                                                        required
-                                                        className="w-full bg-gray-800/50 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 transition"
-                                                    />
+                                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">First Name</label>
+                                                    <input type="text" name="firstName" value={formData.firstName} onChange={onChange} required className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:border-teal-500 transition" />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-400 mb-2">Last Name</label>
-                                                    <input
-                                                        type="text"
-                                                        name="lastName"
-                                                        value={formData.lastName}
-                                                        onChange={onChange}
-                                                        required
-                                                        className="w-full bg-gray-800/50 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 transition"
-                                                    />
+                                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Last Name</label>
+                                                    <input type="text" name="lastName" value={formData.lastName} onChange={onChange} required className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:border-teal-500 transition" />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-400 mb-2">Email Address</label>
-                                                    <input
-                                                        type="email"
-                                                        name="email"
-                                                        value={formData.email}
-                                                        onChange={onChange}
-                                                        required
-                                                        className="w-full bg-gray-800/50 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 transition"
-                                                    />
+                                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Email Address</label>
+                                                    <input type="email" name="email" value={formData.email} onChange={onChange} required className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:border-teal-500 transition" />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-400 mb-2">Contact Number</label>
-                                                    <input
-                                                        type="text"
-                                                        name="contactNumber"
-                                                        value={formData.contactNumber}
-                                                        onChange={onChange}
-                                                        required
-                                                        className="w-full bg-gray-800/50 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 transition"
-                                                    />
+                                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Contact Number</label>
+                                                    <input type="text" name="contactNumber" value={formData.contactNumber} onChange={onChange} required className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:border-teal-500 transition" />
                                                 </div>
                                             </div>
 
-                                            <div className="pt-8 border-t border-gray-700">
-                                                <h2 className="text-xl font-bold text-gray-300 mb-6 flex items-center gap-2">
-                                                    <span className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">🔔</span>
-                                                    Notification Preferences
-                                                </h2>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <label className="flex items-center justify-between p-4 bg-gray-800/50 rounded-2xl border border-gray-700 cursor-pointer hover:border-blue-400 transition">
-                                                        <span className="text-gray-300 font-medium">Email</span>
-                                                        <input type="checkbox" name="notif_email" checked={formData.notificationPreferences.email} onChange={onChange} className="w-5 h-5 rounded text-teal-500" />
-                                                    </label>
-                                                    <label className="flex items-center justify-between p-4 bg-gray-800/50 rounded-2xl border border-gray-700 cursor-pointer hover:border-blue-400 transition">
-                                                        <span className="text-gray-300 font-medium">SMS</span>
-                                                        <input type="checkbox" name="notif_sms" checked={formData.notificationPreferences.sms} onChange={onChange} className="w-5 h-5 rounded text-teal-500" />
-                                                    </label>
-                                                </div>
-                                            </div>
-
-                                            <div className="pt-8 flex gap-4">
-                                                <button
-                                                    type="submit"
-                                                    disabled={saving}
-                                                    className={`flex-1 py-4 px-6 rounded-2xl text-white font-bold transition transform hover:-translate-y-1 shadow-lg shadow-teal-500/20 ${saving ? 'bg-slate-400 cursor-not-allowed' : 'bg-gradient-to-r from-teal-500 to-indigo-600 hover:from-teal-400 hover:to-indigo-500'}`}
-                                                >
-                                                    {saving ? 'Saving Changes...' : 'Save All Settings'}
+                                            <div className="pt-10 flex gap-4">
+                                                <button type="submit" disabled={saving} className={`flex-1 py-4 px-6 rounded-2xl text-white font-black uppercase tracking-widest transition transform hover:-translate-y-1 shadow-xl ${saving ? 'bg-gray-700 cursor-not-allowed' : 'bg-gradient-to-r from-teal-500 to-indigo-600 shadow-teal-500/20'}`}>
+                                                    {saving ? 'Updating...' : 'Save Details'}
                                                 </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setIsEditing(false)}
-                                                    className="px-6 py-4 bg-gray-800 hover:bg-slate-200 text-gray-400 font-bold rounded-2xl transition"
-                                                >
+                                                <button type="button" onClick={() => setIsEditing(false)} className="px-10 py-4 bg-gray-900 border border-gray-700 text-gray-400 font-black uppercase tracking-widest rounded-2xl hover:bg-gray-800 transition">
                                                     Cancel
                                                 </button>
                                             </div>
-                                        </>
+                                        </div>
                                     )}
                                 </section>
                             </form>

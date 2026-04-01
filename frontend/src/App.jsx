@@ -10,6 +10,9 @@ import ForgotPassword from './pages/ForgotPassword';
 import VerifyOTP from './pages/VerifyOTP';
 import ResetPassword from './pages/ResetPassword';
 import AdminDashboard from './pages/AdminDashboard';
+import MySessions from './pages/MySessions';
+import AdminHistory from './pages/AdminHistory';
+import NotificationPreferences from './pages/NotificationPreferences';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 
@@ -23,7 +26,8 @@ const Home = () => {
         <div className="text-2xl font-black text-teal-400 tracking-tighter">STUEDU</div>
         <div className="flex items-center gap-6">
           <Link to="/" className="text-gray-400 hover:text-teal-500 font-medium">Home</Link>
-          <Link to="/dashboard" className="text-gray-400 hover:text-teal-500 font-medium">Sessions</Link>
+          <Link to="/dashboard" className="text-gray-400 hover:text-teal-500 font-medium">Book Sessions</Link>
+          <Link to="/my-sessions" className="text-gray-400 hover:text-teal-500 font-medium">My History</Link>
           {user?.role === 'Admin' && (
             <Link to="/admin" className="px-4 py-1 bg-red-50 text-red-500 rounded-lg font-bold text-sm border border-red-100 hover:bg-red-100 transition">Admin Panel</Link>
           )}
@@ -124,10 +128,34 @@ function App() {
             }
           />
           <Route
+            path="/my-sessions"
+            element={
+              <ProtectedRoute>
+                <MySessions />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notification-preferences"
+            element={
+              <ProtectedRoute>
+                <NotificationPreferences />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin"
             element={
               <ProtectedRoute roles={['Admin']}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/history"
+            element={
+              <ProtectedRoute roles={['Admin']}>
+                <AdminHistory />
               </ProtectedRoute>
             }
           />

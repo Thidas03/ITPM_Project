@@ -18,6 +18,11 @@ const SessionSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    type: {
+        type: String,
+        enum: ['individual', 'group'],
+        default: 'individual'
+    },
     status: {
         type: String,
         enum: ['available', 'booked', 'completed', 'cancelled'],

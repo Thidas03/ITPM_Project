@@ -87,7 +87,24 @@ const userSchema = new mongoose.Schema({
     notificationPreferences: {
         email: { type: Boolean, default: true },
         sms: { type: Boolean, default: false },
-        push: { type: Boolean, default: true }
+        push: { type: Boolean, default: true },
+        timing: {
+            tenMin: { type: Boolean, default: true },
+            twentyMin: { type: Boolean, default: false },
+            oneHour: { type: Boolean, default: true },
+            oneDay: { type: Boolean, default: false }
+        },
+        onCreation: { type: Boolean, default: true },
+        urgentOnly: { type: Boolean, default: false },
+        perType: {
+            individual: { type: Boolean, default: true },
+            group: { type: Boolean, default: true }
+        }
+    },
+    identityNumber: {
+        type: Number,
+        unique: true,
+        sparse: true
     },
     // Account Security fields
     isVerified: {
@@ -110,11 +127,22 @@ const userSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Hash password before saving
+// Hash password & generate identity number before saving
 userSchema.pre('save', async function () {
+    if (this.isNew || !this.identityNumber) {
+        const Counter = require('./Counter');
+        const counter = await Counter.findOneAndUpdate(
+            { id: 'userId' },
+            { $inc: { seq: 1 } },
+            { new: true, upsert: true }
+        );
+        this.identityNumber = counter.seq;
+    }
+
     if (!this.isModified('password')) {
         return;
     }
+
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
 });

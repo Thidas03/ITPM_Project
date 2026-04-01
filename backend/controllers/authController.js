@@ -17,6 +17,20 @@ const generateToken = (id) => {
 exports.registerUser = async (req, res) => {
     const { firstName, lastName, contactNumber, email, password, role } = req.body;
 
+    // Name Validation
+    if (!/^[A-Z]/.test(firstName)) {
+        return res.status(400).json({ message: 'First name must start with a capital letter' });
+    }
+    if (!/^[A-Z]/.test(lastName)) {
+        return res.status(400).json({ message: 'Last name must start with a capital letter' });
+    }
+
+    // Phone Number Validation
+    const phoneDigits = contactNumber.replace(/\D/g, '');
+    if (phoneDigits.length < 10) {
+        return res.status(400).json({ message: 'Phone number must contain at least 10 digits' });
+    }
+
     // Password Strength Check
     const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!passwordStrengthRegex.test(password)) {
@@ -74,6 +88,7 @@ exports.loginUser = async (req, res) => {
                     lastName: user.lastName,
                     email: user.email,
                     role: user.role,
+                    identityNumber: user.identityNumber
                 },
                 token: generateToken(user._id)
             });
@@ -177,7 +192,8 @@ exports.updateUserProfile = async (req, res) => {
                 email: updatedUser.email,
                 contactNumber: updatedUser.contactNumber,
                 role: updatedUser.role,
-                profilePicture: updatedUser.profilePicture, // Added
+                profilePicture: updatedUser.profilePicture,
+                identityNumber: updatedUser.identityNumber,
                 notificationPreferences: updatedUser.notificationPreferences
             }
         });
@@ -224,6 +240,7 @@ exports.googleLogin = async (req, res) => {
                 lastName: user.lastName,
                 email: user.email,
                 role: user.role,
+                identityNumber: user.identityNumber
             },
             token: generateToken(user._id)
         });
@@ -388,6 +405,7 @@ exports.verify2FA = async (req, res) => {
                 lastName: user.lastName,
                 email: user.email,
                 role: user.role,
+                identityNumber: user.identityNumber
             },
             token: generateToken(user._id)
         });

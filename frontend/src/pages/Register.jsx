@@ -30,7 +30,7 @@ const Register = () => {
 
         if (score <= 2) return { score, label: 'Weak', color: 'bg-red-400', width: '33%' };
         if (score <= 4) return { score, label: 'Fair', color: 'bg-amber-400', width: '66%' };
-        return { score, label: 'Strong', color: 'bg-gradient-to-r from-amber-500 to-orange-600', width: '100%' };
+        return { score, label: 'Strong', color: 'bg-emerald-500', width: '100%' };
     };
 
     const strength = checkPasswordStrength(password);
@@ -41,6 +41,23 @@ const Register = () => {
 
     const onSubmit = async (e) => {
         e.preventDefault();
+
+        // Name Validation
+        if (!/^[A-Z]/.test(firstName)) {
+            toast.error('First name must start with a capital letter');
+            return;
+        }
+        if (!/^[A-Z]/.test(lastName)) {
+            toast.error('Last name must start with a capital letter');
+            return;
+        }
+
+        // Phone Number Validation
+        const phoneDigits = contactNumber.replace(/\D/g, '');
+        if (phoneDigits.length < 10) {
+            toast.error('Phone number must contain at least 10 digits');
+            return;
+        }
 
         if (password !== confirmPassword) {
             toast.error('Passwords do not match');

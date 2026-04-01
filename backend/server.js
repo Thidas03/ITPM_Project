@@ -23,10 +23,17 @@ app.get('/', (req, res) => {
 const availabilityRoutes = require('./routes/availabilityRoutes');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 app.use('/api/availability', availabilityRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/notifications', notificationRoutes);
+
+const setupCronJobs = require('./utils/cronJobs');
+setupCronJobs();
 
 const PORT = process.env.PORT || 5000;
 

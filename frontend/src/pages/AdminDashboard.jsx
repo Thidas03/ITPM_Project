@@ -71,14 +71,33 @@ const AdminDashboard = () => {
 
     const handleCreateUser = async (e) => {
         e.preventDefault();
+        const { firstName, lastName, email } = newUserForm;
+
+        // Name Validation
+        if (!/^[A-Z]/.test(firstName)) {
+            toast.error('First name must start with a capital letter');
+            return;
+        }
+        if (!/^[A-Z]/.test(lastName)) {
+            toast.error('Last name must start with a capital letter');
+            return;
+        }
+
+        // Email Validation
+        const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
+        if (!emailRegex.test(email)) {
+            toast.error('Please enter a valid email address');
+            return;
+        }
+
         try {
-            await api.post('/admin/users', newUserForm);
-            toast.success('User created successfully');
+            const res = await api.post('/admin/users', newUserForm);
+            toast.success(res.data.message || 'User successful');
             setIsCreateModalOpen(false);
             setNewUserForm({ firstName: '', lastName: '', email: '', role: 'Student' });
             fetchAdminData();
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Creation failed');
+            toast.error(error.response?.data?.message || 'Action failed');
         }
     };
 
@@ -109,17 +128,29 @@ const AdminDashboard = () => {
                         { id: 'overview', label: 'Dashboard', icon: '📊' },
                         { id: 'users', label: 'User Control', icon: '👥' },
                         { id: 'sessions', label: 'Sessions', icon: '📅' },
+                        { id: 'history_link', label: 'My History', icon: '📜', path: '/admin/history' },
                         { id: 'payments', label: 'Financials', icon: '💳' },
                         { id: 'ratings', label: 'Feedback', icon: '⭐' },
                     ].map(item => (
-                        <button
-                            key={item.id}
-                            onClick={() => setActiveTab(item.id)}
-                            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all font-bold text-sm ${activeTab === item.id ? 'bg-gradient-to-r from-teal-600 to-indigo-700 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-                        >
-                            <span className="text-xl">{item.icon}</span>
-                            {item.label}
-                        </button>
+                        item.path ? (
+                            <Link
+                                key={item.id}
+                                to={item.path}
+                                className="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white"
+                            >
+                                <span className="text-xl">{item.icon}</span>
+                                {item.label}
+                            </Link>
+                        ) : (
+                            <button
+                                key={item.id}
+                                onClick={() => setActiveTab(item.id)}
+                                className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all font-bold text-sm ${activeTab === item.id ? 'bg-gradient-to-r from-teal-600 to-indigo-700 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
+                            >
+                                <span className="text-xl">{item.icon}</span>
+                                {item.label}
+                            </button>
+                        )
                     ))}
                 </nav>
                 <div className="p-6 border-t border-slate-800">
@@ -236,7 +267,7 @@ const AdminDashboard = () => {
                                 onClick={() => setIsCreateModalOpen(true)}
                                 className="px-5 py-2 bg-gradient-to-r from-teal-500 to-indigo-600 text-white font-bold rounded-xl shadow-lg hover:from-teal-400 hover:to-indigo-500 transition"
                             >
-                                + Add User
+                                + Add or Upgrade User
                             </button>
                         </div>
 
@@ -244,6 +275,7 @@ const AdminDashboard = () => {
                             <table className="w-full text-left">
                                 <thead className="bg-gray-900 border-b border-slate-100">
                                     <tr>
+                                        <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest"># ID</th>
                                         <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Identity</th>
                                         <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Access Role</th>
                                         <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Trust Status</th>
@@ -252,7 +284,10 @@ const AdminDashboard = () => {
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {filteredUsers.map(u => (
-                                        <tr key={u._id} className="hover:bg-gray-900/50 transition">
+                                        <tr key={u._id} className="hover:bg-gray-900/50 transition border-b border-gray-700/50">
+                                            <td className="px-8 py-5">
+                                                <span className="text-sm font-black text-teal-500">#{u.identityNumber || 'N/A'}</span>
+                                            </td>
                                             <td className="px-8 py-5">
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-10 h-10 rounded-xl bg-gray-800 overflow-hidden">
@@ -362,18 +397,21 @@ const AdminDashboard = () => {
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
                     <div className="bg-gray-800 rounded-[2rem] border border-gray-700 p-8 w-full max-w-md shadow-2xl">
                         <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-gray-300">Add New User</h3>
+                            <h3 className="text-xl font-bold text-gray-300">Add or Upgrade User</h3>
                             <button onClick={() => setIsCreateModalOpen(false)} className="text-gray-500 hover:text-white transition">✖</button>
                         </div>
+                        <p className="text-xs text-slate-400 mb-6 bg-gray-900 border border-gray-700 p-3 rounded-xl">
+                            Tip: To upgrade a student to Host role, enter their current email and specify role as "Host".
+                        </p>
                         <form onSubmit={handleCreateUser} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">First Name</label>
-                                    <input required type="text" value={newUserForm.firstName} onChange={(e) => setNewUserForm({ ...newUserForm, firstName: e.target.value })} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:border-teal-500 transition" />
+                                    <input type="text" value={newUserForm.firstName} onChange={(e) => setNewUserForm({ ...newUserForm, firstName: e.target.value })} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:border-teal-500 transition" />
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">Last Name</label>
-                                    <input required type="text" value={newUserForm.lastName} onChange={(e) => setNewUserForm({ ...newUserForm, lastName: e.target.value })} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:border-teal-500 transition" />
+                                    <input type="text" value={newUserForm.lastName} onChange={(e) => setNewUserForm({ ...newUserForm, lastName: e.target.value })} className="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-gray-300 focus:outline-none focus:border-teal-500 transition" />
                                 </div>
                             </div>
                             <div>
@@ -390,7 +428,7 @@ const AdminDashboard = () => {
                             </div>
                             <div className="pt-4 flex gap-3">
                                 <button type="button" onClick={() => setIsCreateModalOpen(false)} className="flex-1 py-3 bg-gray-900 rounded-xl font-bold text-gray-400 hover:bg-gray-700 transition">Cancel</button>
-                                <button type="submit" className="flex-1 py-3 bg-gradient-to-r from-teal-500 to-indigo-600 rounded-xl font-bold text-white hover:from-teal-400 hover:to-indigo-500 transition shadow-lg">Create User</button>
+                                <button type="submit" className="flex-1 py-3 bg-gradient-to-r from-teal-500 to-indigo-600 rounded-xl font-bold text-white hover:from-teal-400 hover:to-indigo-500 transition shadow-lg">Submit Change</button>
                             </div>
                         </form>
                     </div>

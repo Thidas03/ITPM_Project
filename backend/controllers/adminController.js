@@ -1,6 +1,22 @@
 const User = require('../models/User');
 const Session = require('../models/Session');
 const Booking = require('../models/Booking');
+const AuditLog = require('../models/AuditLog');
+
+// @desc    Get admin's personal action history
+// @route   GET /api/admin/history
+// @access  Private/Admin
+exports.getAdminHistory = async (req, res) => {
+    try {
+        const logs = await AuditLog.find({ admin: req.user.id }).sort('-createdAt');
+        res.json({
+            success: true,
+            logs
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
 
 // @desc    Get dashboard statistics
 // @route   GET /api/admin/stats
@@ -60,6 +76,15 @@ exports.updateUserStatus = async (req, res) => {
         }
 
         await user.save();
+
+        // Create Audit Log
+        await AuditLog.create({
+            admin: req.user.id,
+            action: 'Role Updated',
+            target: user.email,
+            details: `Status changed to ${user.isBlocked ? 'Blocked' : 'Active'}`
+        });
+
         res.json({ success: true, user });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -83,12 +108,18 @@ exports.getAllSessions = async (req, res) => {
 // @access  Private/Admin
 exports.deleteUser = async (req, res) => {
     try {
-        const user = await User.findById(req.params.id);
+        const user = await User.findByIdAndDelete(req.params.id);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        user.isActive = false;
-        await user.save();
-        res.json({ success: true, message: 'User marked as inactive (Soft Deleted)' });
+        // Create Audit Log
+        await AuditLog.create({
+            admin: req.user.id,
+            action: 'User Deleted',
+            target: user.email,
+            details: 'Permanently deleted user'
+        });
+
+        res.json({ success: true, message: 'User deleted permanently' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -101,15 +132,55 @@ exports.createUser = async (req, res) => {
     try {
         const { firstName, lastName, email, role, contactNumber, password } = req.body;
         
-        const userExists = await User.findOne({ email });
-        if (userExists) {
-            return res.status(400).json({ message: 'User already exists' });
+        // Name Validation
+        if (firstName && !/^[A-Z]/.test(firstName)) {
+            return res.status(400).json({ message: 'First name must start with a capital letter' });
+        }
+        if (lastName && !/^[A-Z]/.test(lastName)) {
+            return res.status(400).json({ message: 'Last name must start with a capital letter' });
+        }
+
+        // Email Validation
+        const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
+        if (email && !emailRegex.test(email)) {
+            return res.status(400).json({ message: 'Please enter a valid email address' });
+        }
+        
+        let user = await User.findOne({ email });
+        
+        if (user) {
+            // Prevent Admin from changing their own role to non-admin
+            if (user._id.toString() === req.user.id.toString() && role !== 'Admin') {
+                return res.status(400).json({ message: 'Operation blocked: You cannot downgrade your own administrative role.' });
+            }
+
+            // Update role if it's different
+            if (role && role !== user.role) {
+                const oldRole = user.role;
+                user.role = role;
+                // Auto-approve if upgrading to Host from Student
+                if (role === 'Host' && oldRole === 'Student') {
+                    user.tutorRequestStatus = 'approved';
+                }
+                await user.save();
+                return res.json({
+                    success: true,
+                    message: `User role upgraded from ${oldRole} to ${role} successfully`,
+                    user
+                });
+            }
+            return res.status(400).json({ message: `User already exists as a ${user.role}` });
+        }
+
+        // Validate required fields for NEW users
+        if (!firstName || !lastName || !email) {
+            return res.status(400).json({ message: 'First name, last name, and email are required for new users' });
         }
 
         // Use temporary password if none provided
         const tempPassword = password || Math.random().toString(36).slice(-8) + 'A@1';
 
-        const user = await User.create({
+        user = await User.create({
             firstName,
             lastName,
             email,
@@ -118,6 +189,14 @@ exports.createUser = async (req, res) => {
             role: role || 'Student',
             isVerified: true,
             isActive: true
+        });
+
+        // Create Audit Log
+        await AuditLog.create({
+            admin: req.user.id,
+            action: 'User Created',
+            target: email,
+            details: `Manually created user with role ${role || 'Student'}`
         });
 
         res.status(201).json({
@@ -147,6 +226,14 @@ exports.updateUser = async (req, res) => {
 
         const { firstName, lastName, contactNumber, role, isActive, isBlocked, tutorRequestStatus } = req.body;
 
+        // Name Validation
+        if (firstName && !/^[A-Z]/.test(firstName)) {
+            return res.status(400).json({ message: 'First name must start with a capital letter' });
+        }
+        if (lastName && !/^[A-Z]/.test(lastName)) {
+            return res.status(400).json({ message: 'Last name must start with a capital letter' });
+        }
+
         if (firstName) user.firstName = firstName;
         if (lastName) user.lastName = lastName;
         if (contactNumber) user.contactNumber = contactNumber;
@@ -165,6 +252,15 @@ exports.updateUser = async (req, res) => {
         if (tutorRequestStatus !== undefined) user.tutorRequestStatus = tutorRequestStatus;
 
         const updatedUser = await user.save();
+
+        // Create Audit Log
+        await AuditLog.create({
+            admin: req.user.id,
+            action: 'Role Updated',
+            target: updatedUser.email,
+            details: `Updated details and/or role to ${updatedUser.role}`
+        });
+
         res.json({
             success: true,
             message: 'User updated successfully',

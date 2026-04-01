@@ -8,13 +8,15 @@ const {
     getAllSessions,
     deleteUser,
     createUser,
-    updateUser
+    updateUser,
+    getAdminHistory
 } = require('../controllers/adminController');
 
 router.use(protect);
 router.use(admin);
 
 router.get('/stats', getDashboardStats);
+router.get('/history', getAdminHistory);
 router.get('/users', getAllUsers);
 router.post('/users', createUser);
 router.put('/users/:id', updateUser);
