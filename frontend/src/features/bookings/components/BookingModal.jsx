@@ -1,32 +1,63 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { createBooking } from '../services/bookingService';
 import { toast } from 'react-toastify';
 
-const BookingModal = ({ isOpen, onClose, session, studentId, onSuccess }) => {
+// This modal books against an Availability slot for a specific calendar date.
+const BookingModal = ({ isOpen, onClose, availability, studentId, onSuccess }) => {
     const [loading, setLoading] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(() => new Date());
     const [notes, setNotes] = useState('');
 
-    if (!isOpen || !session) return null;
+    if (!isOpen || !availability) return null;
+
+    const minDate = useMemo(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return today.toISOString().split('T')[0];
+    }, []);
+
+    const computeWeekdayName = (d) => {
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        return days[d.getDay()];
+    };
 
     const handleConfirm = async () => {
+        const dateOnly = new Date(selectedDate);
+        dateOnly.setHours(0, 0, 0, 0);
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (dateOnly < today) {
+            toast.warning('You cannot book for a past date.');
+            return;
+        }
+
+        const weekdayName = computeWeekdayName(dateOnly);
+        if (weekdayName !== availability.dayOfWeek) {
+            toast.warning(`Please select a ${availability.dayOfWeek} to match this slot.`);
+            return;
+        }
+
         try {
             setLoading(true);
             await createBooking({
-                session: session._id,
                 student: studentId,
-                notes
+                availability: availability._id,
+                bookingDate: dateOnly.toISOString()
+                // notes could be added to Booking model later if needed
             });
             toast.success('Successfully booked the session!');
             onSuccess();
             onClose();
         } catch (error) {
-            toast.error(error?.response?.data?.error || 'Failed to book session. You might already be booked.');
+            toast.error(error?.response?.data?.message || 'Failed to book session. You might already be booked.');
         } finally {
             setLoading(false);
         }
     };
 
-    const formattedDate = new Date(session.date).toLocaleDateString(undefined, {
+    const formattedDate = new Date(selectedDate).toLocaleDateString(undefined, {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
 
@@ -39,13 +70,30 @@ const BookingModal = ({ isOpen, onClose, session, studentId, onSuccess }) => {
                     <p className="text-gray-400 mb-6">You are about to book a session. Please review the details below.</p>
 
                     <div className="bg-gray-800 p-5 rounded-xl border border-gray-700 mb-6 space-y-3">
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center mb-3">
                             <span className="text-gray-400">Date</span>
                             <span className="text-teal-400 font-semibold">{formattedDate}</span>
                         </div>
+                        <div>
+                            <label className="block text-xs text-gray-400 mb-1">
+                                Select a date (must be a {availability.dayOfWeek}, past dates disabled)
+                            </label>
+                            <input
+                                type="date"
+                                className="w-full bg-gray-900 text-white border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                min={minDate}
+                                value={selectedDate.toISOString().split('T')[0]}
+                                onChange={(e) => {
+                                    const d = new Date(e.target.value);
+                                    if (!isNaN(d.getTime())) {
+                                        setSelectedDate(d);
+                                    }
+                                }}
+                            />
+                        </div>
                         <div className="flex justify-between items-center">
                             <span className="text-gray-400">Time</span>
-                            <span className="text-white font-medium">{session.startTime} - {session.endTime}</span>
+                            <span className="text-white font-medium">{availability.startTime} - {availability.endTime}</span>
                         </div>
                     </div>
 

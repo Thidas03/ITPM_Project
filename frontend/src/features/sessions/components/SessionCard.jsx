@@ -7,12 +7,47 @@ const SessionCard = ({ session, onBook }) => {
     const isAvailable = session.status === 'available' && session.currentParticipants < session.maxParticipants;
     const isFullyBooked = session.status === 'booked' || session.currentParticipants >= session.maxParticipants;
     const isBookedByMe = session.isBookedByMe;
+const parseSessionTime = (dateStr, timeStr) => {
+    if (!dateStr || !timeStr || timeStr === 'N/A') return null;
+    const d = new Date(dateStr);
+    const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM|am|pm)?/);
+    if (!match) return null;
+    let [ , hours, minutes, ampm ] = match;
+    hours = parseInt(hours, 10);
+    minutes = parseInt(minutes, 10);
+    if (ampm) {
+        if (ampm.toLowerCase() === 'pm' && hours < 12) hours += 12;
+        if (ampm.toLowerCase() === 'am' && hours === 12) hours = 0;
+    }
+    d.setHours(hours, minutes, 0, 0);
+    return d;
+};
+
+const SessionCard = ({ session, onViewDetails }) => {
+    const [isHovered, setIsHovered] = useState(false);
+
+    const now = new Date();
+    const sessionEndDateTime = parseSessionTime(session.date, session.endTime);
+    
+    let isPast = false;
+    if (sessionEndDateTime) {
+        isPast = sessionEndDateTime < now;
+    } else {
+        const dateString = session.date.split('T')[0];
+        const fallbackEndDateTime = new Date(`${dateString}T${session.endTime}`);
+        isPast = fallbackEndDateTime < now;
+    }
+
+    const isFull = session.currentParticipants >= session.maxParticipants;
+
+    const isAvailable = !isPast && !isFull;
+    const isFullyBooked = isFull;
 
     return (
         <div
             className={`relative p-6 rounded-2xl border transition-all duration-300 transform 
         ${isHovered && isAvailable ? '-translate-y-1 shadow-2xl border-teal-500' : 'border-gray-700 shadow-lg'}
-        ${isFullyBooked ? 'bg-gray-800/60 opacity-75' : 'bg-gray-800'}`}
+        ${isPast || isFull ? 'bg-gray-800/60 opacity-75' : 'bg-gray-800'}`}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
@@ -31,6 +66,13 @@ const SessionCard = ({ session, onBook }) => {
                             isFullyBooked ? 'bg-red-500/10 text-red-500 border-red-500/20' :
                                 'bg-gray-600/20 text-gray-400 border-gray-600/30'}`}>
                     {isBookedByMe ? 'Confirmed' : session.status}
+          ${isPast
+                        ? 'bg-gray-600/20 text-gray-400 border-gray-600/30'
+                        : isFull
+                            ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                            : 'bg-teal-500/10 text-teal-400 border-teal-500/30'}`}>
+
+                    {isPast ? 'expired' : isFull ? 'booked' : 'available'}
                 </div>
             </div>
 
@@ -70,6 +112,17 @@ const SessionCard = ({ session, onBook }) => {
                     {isAvailable ? 'Book Session' : 'Unavailable'}
                 </button>
             )}
+            <button
+                onClick={() => isAvailable && onViewDetails(session)}
+                disabled={!isAvailable}
+                className={`w-full py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300
+        ${isAvailable
+                        ? 'bg-gradient-to-r from-teal-500 to-indigo-600 text-white shadow-lg hover:shadow-teal-500/25 hover:from-teal-400 hover:to-indigo-500'
+                        : 'bg-gray-700 text-gray-400 cursor-not-allowed'}`}
+            >
+                {isPast ? 'Expired' : isFull ? 'Full' : 'View Details'}
+            </button>
+
 
             {/* Decorative background element on hover */}
             {isHovered && isAvailable && (
@@ -78,5 +131,7 @@ const SessionCard = ({ session, onBook }) => {
         </div>
     );
 };
+
+
 
 export default SessionCard;
