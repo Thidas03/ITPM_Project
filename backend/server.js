@@ -1,12 +1,24 @@
-require('dotenv').config();
-const express = require('express');
-const connectDB = require('./config/db');
+const express = require("express");
+const cors = require("cors");
+const dotenv = require("dotenv");
+const connectDB = require("./config/db");
 
+dotenv.config();
 // Connect to MongoDB
 connectDB();
 
 const app = express();
 
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Routes
+app.use("/api/feedback", require("./routes/feedbackRoutes"));
+
+// Optional test route
+app.get("/", (req, res) => {
+  res.send("Backend is running...");
 // Enable CORS
 const cors = require('cors');
 app.use(cors());
