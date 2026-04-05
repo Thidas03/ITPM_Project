@@ -48,7 +48,7 @@ const Home = () => {
           The ultimate Campus Peer Tutoring platform. Connect with the best tutors in your campus, manage your sessions, and excel in every subject with STUEDU.
         </p>
         <div className="flex flex-wrap gap-4 justify-center">
-          <Link to="/dashboard" className="px-8 py-4 bg-gradient-to-r from-teal-500 to-indigo-600 text-white rounded-2xl font-bold hover:from-teal-400 hover:to-indigo-500 transition text-lg shadow-xl shadow-teal-500/20 flex items-center gap-2">
+          <Link to="/login" className="px-8 py-4 bg-gradient-to-r from-teal-500 to-indigo-600 text-white rounded-2xl font-bold hover:from-teal-400 hover:to-indigo-500 transition text-lg shadow-xl shadow-teal-500/20 flex items-center gap-2">
             Explore Sessions 🚀
           </Link>
           <Link to="/register" className="px-8 py-4 bg-gray-800 text-gray-400 rounded-2xl font-bold hover:bg-gray-900 transition border border-gray-700 text-lg shadow-md">

@@ -17,7 +17,7 @@ const normalizeDate = (value) => {
 // @access  Private
 exports.createBooking = async (req, res) => {
     try {
-        const studentId = req.user.id; // From protect middleware
+        const studentId = req.user._id; // From protect middleware
         if (req.body.availability) {
             const { availability: availabilityId, bookingDate } = req.body;
             if (!availabilityId || !bookingDate) {
@@ -102,7 +102,7 @@ exports.createBooking = async (req, res) => {
 exports.createSessionBooking = async (req, res) => {
     try {
         const { session: sessionId } = req.body;
-        const studentId = req.user.id;
+        const studentId = req.user._id;
 
         const session = await Session.findById(sessionId);
         if (!session) return res.status(404).json({ success: false, message: 'Session not found' });
@@ -143,7 +143,7 @@ exports.createSessionBooking = async (req, res) => {
 // @desc    Get current student's bookings
 exports.getStudentBookings = async (req, res) => {
     try {
-        const bookings = await Booking.find({ student: req.user.id })
+        const bookings = await Booking.find({ student: req.user._id })
             .populate('session')
             .populate('availability')
             .sort({ createdAt: -1 });
@@ -208,7 +208,7 @@ exports.cancelBooking = async (req, res) => {
             }
             await Availability.findOneAndUpdate(
                 { _id: booking.session },
-                { $pull: { enrolledStudents: req.user.id } }
+                { $pull: { enrolledStudents: req.user._id } }
             );
         }
 
@@ -221,7 +221,7 @@ exports.cancelBooking = async (req, res) => {
 // @desc    Complete booking
 exports.completeBooking = async (req, res) => {
     try {
-        const booking = await Booking.findOne({ _id: req.params.id, student: req.user.id }).populate('session');
+        const booking = await Booking.findOne({ _id: req.params.id, student: req.user._id }).populate('session');
         if (!booking) return res.status(404).json({ message: 'Booking not found' });
         if (booking.status === 'completed') return res.status(400).json({ message: 'Session already completed' });
 
@@ -240,7 +240,7 @@ exports.completeBooking = async (req, res) => {
 exports.rateBooking = async (req, res) => {
     try {
         const { rating, review } = req.body;
-        const booking = await Booking.findOne({ _id: req.params.id, student: req.user.id });
+        const booking = await Booking.findOne({ _id: req.params.id, student: req.user._id });
         if (!booking) return res.status(404).json({ message: 'Booking not found' });
         if (booking.status !== 'completed') return res.status(400).json({ message: 'You can only rate a completed session' });
 
@@ -258,7 +258,7 @@ exports.rateBooking = async (req, res) => {
 exports.getSessionDetails = async (req, res) => {
     try {
         const sessionId = req.params.sessionId;
-        const studentId = req.user.id;
+        const studentId = req.user._id;
         const availability = await Availability.findById(sessionId);
 
         if (!availability) return res.status(404).json({ success: false, error: 'Session not found' });

@@ -112,9 +112,9 @@ const Dashboard = () => {
             {/* Top Navbar */}
             <nav className="border-b border-gray-700 bg-gray-800/80 backdrop-blur-md sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-                    <div className="text-xl font-black text-teal-400 shrink-0">
+                    <Link to="/" className="text-xl font-black text-teal-400 shrink-0 hover:text-teal-300 transition">
                         STUEDU
-                    </div>
+                    </Link>
                     <div className="flex items-center gap-6">
                         {user?.role === 'Admin' && (
                             <Link to="/admin" className="px-4 py-1.5 bg-slate-800 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-700 transition">Admin Panel</Link>

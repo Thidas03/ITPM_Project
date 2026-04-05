@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import TutorScheduleManager from '../features/sessions/components/TutorScheduleManager';
 import { getNotifications, markAllAsRead } from '../features/notifications/services/notificationService';
 import { useAuth } from '../context/AuthContext';
@@ -42,9 +42,9 @@ const TutorDashboard = () => {
       {/* Top Navbar */}
       <nav className="border-b border-gray-800 bg-gray-900/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-indigo-500 shrink-0">
+          <Link to="/" className="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-indigo-500 shrink-0 hover:opacity-80 transition">
             STUEDU – Tutor
-          </div>
+          </Link>
           <div className="flex items-center gap-6">
             {/* Notifications Bell */}
             <div className="relative">
