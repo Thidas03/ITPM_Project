@@ -50,7 +50,7 @@ const SmartSlotRecommend = ({ tutorId, onBook }) => {
             <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-6">
                     <span className="text-xl">✨</span>
-                    <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-purple-400">
+                    <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-indigo-500">
                         Smart Recommendation
                     </h2>
                     <span className="ml-auto text-xs font-semibold px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded-md border border-indigo-500/30">

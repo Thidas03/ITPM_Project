@@ -71,6 +71,25 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    stripeCustomerId: {
+        type: String,
+        default: null
+    },
+    paidSessions: {
+        type: [String],
+        default: []
+    },
+    subscriptionStatus: {
+        type: String,
+        enum: ['none', 'active', 'canceled'],
+        default: 'none'
+    },
+    subscriptionTier: {
+        type: String,
+        enum: ['free', 'premium'],
+        default: 'free'
+    },
+    createdAt: {
     isActive: {
         type: Boolean,
         default: true

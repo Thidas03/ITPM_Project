@@ -64,6 +64,10 @@ const Dashboard = () => {
 
     const fetchAvailableSlots = async () => {
         try {
+            const data = await getTutorSessions(selectedTutorId, user._id);
+            // Show all sessions (the service now marks isBookedByMe)
+            const available = data.data || data;
+            setSessions(available);
             const data = await getTutorAvailability(selectedTutorId);
             // Only show availability slots that are not booked
             const available = (data.data || data).filter(a => !a.isBooked);
@@ -115,6 +119,14 @@ const Dashboard = () => {
             {/* Top Navbar */}
             <nav className="border-b border-gray-700 bg-gray-800/80 backdrop-blur-md sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+                    <div className="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-indigo-600 shrink-0">
+                        StuEdu
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <span className="text-gray-400 text-sm hidden sm:inline">Logged in as {user.name}</span>
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-teal-500 to-indigo-600 flex items-center justify-center font-bold">
+                            {user.name.charAt(0)}
+                        </div>
                     <div className="text-xl font-black text-teal-400 shrink-0">
                         STUEDU
                     </div>

@@ -207,6 +207,9 @@ const TutorScheduleManager = ({ tutorId }) => {
     return (
         <div className="text-gray-300 w-full font-sans">
             <div className="max-w-6xl mx-auto space-y-8">
+                <header className="border-b border-gray-800 pb-6">
+                    <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-indigo-600">
+                        Tutor Schedule Manager
                 <header className="mb-8">
                     <h1 className="text-4xl font-extrabold text-gray-300">
                         Work Schedule
@@ -227,6 +230,9 @@ const TutorScheduleManager = ({ tutorId }) => {
                                     className="w-full border-none shadow-none"
                                 />
                             </div>
+                            <div className="mt-4 p-4 bg-gray-700/50 rounded-xl border border-gray-600">
+                                <p className="text-sm text-gray-300">Selected Date:</p>
+                                <p className="text-lg font-bold text-teal-500">{date.toDateString()}</p>
                             <div className="mt-4 p-4 bg-teal-500/10 rounded-2xl border border-gray-700">
                                 <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Editing Shift For</p>
                                 <p className="text-lg font-bold text-teal-400">{date.toDateString()}</p>
@@ -431,6 +437,7 @@ const TutorScheduleManager = ({ tutorId }) => {
                                             type="time"
                                             value={endTime}
                                             onChange={(e) => setEndTime(e.target.value)}
+                                            className="w-full bg-gray-900 text-white border border-gray-600 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition-all"
                                             className="w-full bg-gray-800/50 border border-gray-700 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all font-medium"
                                             required
                                         />
@@ -628,6 +635,10 @@ const TutorScheduleManager = ({ tutorId }) => {
                 )}
 
                         {/* List of Sessions */}
+                        <div className="bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-xl border border-gray-700">
+                            <h2 className="text-2xl font-semibold mb-6 text-gray-100 flex items-center justify-between border-b border-gray-700 pb-3">
+                                <span>Slots on <span className="text-teal-500">{date.toLocaleDateString()}</span></span>
+                                <span className="text-sm font-normal px-3 py-1 bg-gray-700 rounded-full text-gray-300">{selectedDateSessions.length} slots</span>
                         <div className="bg-gray-800 p-8 rounded-[2rem] shadow-xl shadow-blue-50 border border-gray-700">
                             <h2 className="text-2xl font-bold mb-6 text-gray-300 flex items-center justify-between border-b border-gray-700 pb-3">
                                 <span>Active Slots</span>
@@ -662,6 +673,7 @@ const TutorScheduleManager = ({ tutorId }) => {
                                             </div>
                                             <button
                                                 onClick={() => handleDeleteSession(session._id)}
+                                                className="opacity-100 hover:bg-red-500/20 text-red-500 hover:text-red-400 px-4 py-2 rounded-lg border border-red-500/20 transition-colors text-sm font-medium w-full sm:w-auto"
                                                 className="px-6 py-2 rounded-xl text-red-500 hover:bg-red-50 font-bold text-sm border border-transparent hover:border-red-100 transition-all"
                                             >
                                                 Remove Slot

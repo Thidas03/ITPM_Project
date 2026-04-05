@@ -29,6 +29,13 @@ const SessionSchema = new mongoose.Schema({
         enum: ['available', 'booked', 'completed', 'cancelled'],
         default: 'available'
     },
+    password: {
+        type: String,
+        default: 'SECRET_PASS_123'
+    },
+    meetingLink: {
+        type: String,
+        default: 'https://zoom.us/j/mock_meeting_id'
     maxParticipants: {
         type: Number,
         default: 1

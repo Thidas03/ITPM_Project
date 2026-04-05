@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest --watchAll=false",
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
@@ -22,11 +22,16 @@
     "mongoose": "^9.2.1",
     "morgan": "^1.10.1",
     "node-cron": "^4.2.1",
+    "nodemailer": "^8.0.4",
+    "stripe": "^20.4.1"
     "nodemailer": "^8.0.3",
     "otp-generator": "^4.0.1",
     "zxcvbn": "^4.4.2"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "jest": "^29.7.0",
+    "mongodb-memory-server": "^11.0.1",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.0.0"
   }
 }

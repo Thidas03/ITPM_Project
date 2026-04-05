@@ -1,7 +1,8 @@
 import api from '../../../services/api';
 
-export const getTutorSessions = async (tutorId) => {
-    const response = await api.get(`/sessions/tutor/${tutorId}`);
+export const getTutorSessions = async (tutorId, studentId = null) => {
+    const url = studentId ? `/availability/${tutorId}?studentId=${studentId}` : `/availability/${tutorId}`;
+    const response = await api.get(url);
     return response.data;
 };
 

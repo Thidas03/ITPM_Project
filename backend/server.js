@@ -4,6 +4,11 @@ const cors = require('cors');
 const morgan = require('morgan');
 const connectDB = require('./config/db');
 
+// Route files
+const stripeRoutes = require('./routes/stripeRoutes');
+const availabilityRoutes = require('./routes/availabilityRoutes');
+const bookingRoutes = require('./routes/bookingRoutes');
+
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -32,6 +37,11 @@ app.use(cors());
 
 // Middleware to parse JSON
 app.use(express.json());
+
+// Mount routers
+app.use('/api/stripe', stripeRoutes);
+app.use('/api/availability', availabilityRoutes);
+app.use('/api/bookings', bookingRoutes);
 
 // Test route
 app.get('/', (req, res) => {

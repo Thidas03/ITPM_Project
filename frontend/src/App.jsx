@@ -45,6 +45,11 @@ const Navbar = () => {
 };
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
+import Dashboard from './pages/Dashboard';
+import Pricing from './components/Pricing';
+import Success from './pages/Success';
+import Cancel from './pages/Cancel';
+import SessionRoom from './pages/SessionRoom';
 import 'react-toastify/dist/ReactToastify.css';
 import './index.css';
 import Register from './pages/Register';
@@ -60,6 +65,8 @@ import NotificationPreferences from './pages/NotificationPreferences';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 
+// Placeholder components
+const Login = () => <div className="text-gray-300 bg-gray-900 min-h-screen p-10">Login Page coming soon...</div>;
 const Home = () => {
   const { user } = useAuth();
 
@@ -155,6 +162,15 @@ const Signup = () => <div className="text-white bg-gray-900 min-h-screen p-10">S
 function App() {
   return (
     <Router>
+      <div className="App font-sans antialiased text-gray-300 bg-gray-900 min-h-screen">
+        <Routes>
+          <Route path="/" element={<Pricing />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/success" element={<Success />} />
+          <Route path="/cancel" element={<Cancel />} />
+          <Route path="/session/:sessionId" element={<SessionRoom />} />
       <div className="min-h-screen bg-gray-900">
         <Navbar />
 
