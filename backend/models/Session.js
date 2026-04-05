@@ -8,7 +8,8 @@ const SessionSchema = new mongoose.Schema({
     },
     date: {
         type: Date,
-        required: true
+        required: true,
+        expires: 86400 // 24 hours
     },
     startTime: {
         type: String,
@@ -22,6 +23,18 @@ const SessionSchema = new mongoose.Schema({
         type: String,
         enum: ['available', 'booked', 'completed', 'cancelled'],
         default: 'available'
+    },
+    maxParticipants: {
+        type: Number,
+        default: 1
+    },
+    currentParticipants: {
+        type: Number,
+        default: 0
+    },
+    meetingLink: {
+        type: String,
+        default: ''
     },
     createdAt: {
         type: Date,

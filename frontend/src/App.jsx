@@ -42,6 +42,18 @@ const Navbar = () => {
     </nav>
   );
 };
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import './index.css';
+import Dashboard from './pages/Dashboard';
+import TutorDashboard from './pages/TutorDashboard';
+import StudentDashboard from './pages/StudentDashboard';
+
+import Home from './pages/Home';
+
+const Login = () => <div className="text-white bg-gray-900 min-h-screen p-10">Login Page coming soon...</div>;
+const Signup = () => <div className="text-white bg-gray-900 min-h-screen p-10">Sign Up Page coming soon...</div>;
 
 function App() {
   return (
@@ -55,6 +67,15 @@ function App() {
           <Route path="/tutor-reviews" element={<TutorReviewsPage />} />
           <Route path="/my-reviews" element={<MyReviewsPage />} />
           <Route path="/admin-feedback" element={<AdminFeedbackPage />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          {/* Legacy combined dashboard (optional) */}
+          <Route path="/dashboard" element={<Dashboard />} />
+          {/* Separate dashboards */}
+          <Route path="/dashboard/tutor" element={<TutorDashboard />} />
+          <Route path="/dashboard/student" element={<StudentDashboard />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </Router>
