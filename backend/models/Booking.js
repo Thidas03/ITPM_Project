@@ -31,6 +31,25 @@ const BookingSchema = new mongoose.Schema({
         enum: ['upcoming', 'completed', 'cancelled'],
         default: 'upcoming'
     },
+    attended: {
+        type: Boolean,
+        default: false
+    },
+    attendanceStatus: {
+        type: String,
+        enum: ['attended', 'missed', 'none'],
+        default: 'none'
+    },
+    rating: {
+        type: Number,
+        min: 1,
+        max: 5
+    },
+    review: {
+        type: String,
+        maxlength: 500
+    },
+    notes: {
     meetingLink: {
         type: String,
         required: true
@@ -38,7 +57,10 @@ const BookingSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now
-    }
+    },
+    sentReminders: [{ type: String }]
+}, {
+    timestamps: true
 });
 
 module.exports = mongoose.model('Booking', BookingSchema);

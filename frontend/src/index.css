@@ -1,1 +1,36 @@
 @import "tailwindcss";
+
+@theme {
+    --font-sans: "Inter", "system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif";
+    --color-babyblue: #89CFF0;
+    --color-babyblue-dark: #5dade2;
+    --color-babyblue-light: #e1f5fe;
+}
+
+:root {
+    background-color: #f0f9ff;
+    /* Very light blue background */
+    color: #1e293b;
+    /* Slate-800 */
+}
+
+body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    font-family: var(--font-sans);
+}
+
+/* Glassmorphism utility for light theme */
+.glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.text-gradient {
+    background: linear-gradient(to right, #3b82f6, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
