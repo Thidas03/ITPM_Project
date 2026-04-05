@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const SessionCard = ({ session, onBook }) => {
-    const navigate = useNavigate();
-    const [isHovered, setIsHovered] = useState(false);
-    const isAvailable = session.status === 'available' && session.currentParticipants < session.maxParticipants;
-    const isFullyBooked = session.status === 'booked' || session.currentParticipants >= session.maxParticipants;
-    const isBookedByMe = session.isBookedByMe;
 const parseSessionTime = (dateStr, timeStr) => {
     if (!dateStr || !timeStr || timeStr === 'N/A') return null;
     const d = new Date(dateStr);
@@ -23,7 +17,8 @@ const parseSessionTime = (dateStr, timeStr) => {
     return d;
 };
 
-const SessionCard = ({ session, onViewDetails }) => {
+const SessionCard = ({ session, onBook, onViewDetails }) => {
+    const navigate = useNavigate();
     const [isHovered, setIsHovered] = useState(false);
 
     const now = new Date();
@@ -39,9 +34,8 @@ const SessionCard = ({ session, onViewDetails }) => {
     }
 
     const isFull = session.currentParticipants >= session.maxParticipants;
-
-    const isAvailable = !isPast && !isFull;
-    const isFullyBooked = isFull;
+    const isBookedByMe = session.isBookedByMe;
+    const isAvailable = !isPast && !isFull && !isBookedByMe;
 
     return (
         <div
@@ -62,17 +56,10 @@ const SessionCard = ({ session, onViewDetails }) => {
                 </div>
                 <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border 
                   ${isBookedByMe ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' :
-                        isAvailable ? 'bg-teal-500/10 text-teal-500 border-teal-500/20' :
-                            isFullyBooked ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                        isAvailable ? 'bg-teal-500/10 text-teal-400 border-teal-500/30' :
+                            isFull ? 'bg-red-500/10 text-red-400 border-red-500/30' :
                                 'bg-gray-600/20 text-gray-400 border-gray-600/30'}`}>
-                    {isBookedByMe ? 'Confirmed' : session.status}
-          ${isPast
-                        ? 'bg-gray-600/20 text-gray-400 border-gray-600/30'
-                        : isFull
-                            ? 'bg-red-500/10 text-red-400 border-red-500/30'
-                            : 'bg-teal-500/10 text-teal-400 border-teal-500/30'}`}>
-
-                    {isPast ? 'expired' : isFull ? 'booked' : 'available'}
+                    {isBookedByMe ? 'Confirmed' : isPast ? 'expired' : isFull ? 'booked' : 'available'}
                 </div>
             </div>
 
@@ -84,10 +71,9 @@ const SessionCard = ({ session, onViewDetails }) => {
                     </span>
                 </div>
 
-                {/* Progress bar for participants */}
                 <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
                     <div
-                        className={`h-2 rounded-full ${isFullyBooked ? 'bg-red-500' : 'bg-teal-500'}`}
+                        className={`h-2 rounded-full ${isFull ? 'bg-red-500' : 'bg-teal-500'}`}
                         style={{ width: `${(session.currentParticipants / session.maxParticipants) * 100}%` }}
                     ></div>
                 </div>
@@ -100,7 +86,7 @@ const SessionCard = ({ session, onViewDetails }) => {
                 >
                     Enter Classroom
                 </button>
-            ) : (
+            ) : onBook ? (
                 <button
                     onClick={() => onBook(session)}
                     disabled={!isAvailable}
@@ -111,27 +97,24 @@ const SessionCard = ({ session, onViewDetails }) => {
                 >
                     {isAvailable ? 'Book Session' : 'Unavailable'}
                 </button>
-            )}
-            <button
-                onClick={() => isAvailable && onViewDetails(session)}
-                disabled={!isAvailable}
-                className={`w-full py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300
-        ${isAvailable
-                        ? 'bg-gradient-to-r from-teal-500 to-indigo-600 text-white shadow-lg hover:shadow-teal-500/25 hover:from-teal-400 hover:to-indigo-500'
-                        : 'bg-gray-700 text-gray-400 cursor-not-allowed'}`}
-            >
-                {isPast ? 'Expired' : isFull ? 'Full' : 'View Details'}
-            </button>
+            ) : onViewDetails ? (
+                <button
+                    onClick={() => isAvailable && onViewDetails(session)}
+                    disabled={!isAvailable}
+                    className={`w-full py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300
+            ${isAvailable
+                            ? 'bg-gradient-to-r from-teal-500 to-indigo-600 text-white shadow-lg hover:shadow-teal-500/25 hover:from-teal-400 hover:to-indigo-500'
+                            : 'bg-gray-700 text-gray-400 cursor-not-allowed'}`}
+                >
+                    {isPast ? 'Expired' : isFull ? 'Full' : 'View Details'}
+                </button>
+            ) : null}
 
-
-            {/* Decorative background element on hover */}
             {isHovered && isAvailable && (
                 <div className="absolute inset-0 bg-gradient-to-tr from-teal-500/5 to-indigo-500/5 rounded-2xl pointer-events-none"></div>
             )}
         </div>
     );
 };
-
-
 
 export default SessionCard;

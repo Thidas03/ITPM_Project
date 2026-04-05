@@ -16,7 +16,16 @@ const Login = () => {
         const res = await login(email, password);
         if (res.success) {
             toast.success('Login successful!');
-            navigate('/dashboard');
+            const loggedInUser = JSON.parse(localStorage.getItem('user'));
+            if (loggedInUser?.role === 'Student') {
+                navigate('/dashboard/student');
+            } else if (loggedInUser?.role === 'Host' || loggedInUser?.role === 'Tutor') {
+                navigate('/dashboard/tutor');
+            } else if (loggedInUser?.role === 'Admin') {
+                navigate('/admin');
+            } else {
+                navigate('/dashboard');
+            }
         } else {
             toast.error(res.message);
         }
@@ -26,7 +35,16 @@ const Login = () => {
         const res = await googleLogin(credentialResponse.credential);
         if (res.success) {
             toast.success('Google Login successful!');
-            navigate('/dashboard');
+            const loggedInUser = JSON.parse(localStorage.getItem('user'));
+            if (loggedInUser?.role === 'Student') {
+                navigate('/dashboard/student');
+            } else if (loggedInUser?.role === 'Host' || loggedInUser?.role === 'Tutor') {
+                navigate('/dashboard/tutor');
+            } else if (loggedInUser?.role === 'Admin') {
+                navigate('/admin');
+            } else {
+                navigate('/dashboard');
+            }
         } else {
             toast.error(res.message);
         }

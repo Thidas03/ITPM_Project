@@ -12,8 +12,6 @@ const {
   deleteAvailability
 } = require('../controllers/availabilityController');
 
-const router = express.Router();
-
 // Middleware to handle validation errors
 const validate = (req, res, next) => {
     const errors = validationResult(req);
@@ -23,6 +21,7 @@ const validate = (req, res, next) => {
     next();
 };
 
+// POST /api/availability
 router.post(
     '/',
     [
@@ -34,24 +33,23 @@ router.post(
     ],
     createAvailability
 );
-// POST /api/availability
-router.post('/', createAvailability);
 
-// GET /api/availability/:tutorId
-router.get('/:tutorId', getAvailabilityByTutor);
-// ORDER MATTERS
+// GET /api/availability
 router.get('/', getAllAvailability);
-router.post('/', createAvailability);
 
+// GET /api/availability/tutor/:tutorId
 router.get('/tutor/:tutorId', getAvailabilityByTutor);
 
+// GET /api/availability/:id
 router.get('/:id', getAvailabilityById);
-router.put('/cancel/:id', cancelAvailability);
-router.put('/:id', updateAvailability);
-router.delete('/:id', deleteAvailability);
 
-router.get('/', (req, res) => {
-    res.send("Availability GET works");
-});
+// PUT /api/availability/cancel/:id
+router.put('/cancel/:id', cancelAvailability);
+
+// PUT /api/availability/:id
+router.put('/:id', updateAvailability);
+
+// DELETE /api/availability/:id
+router.delete('/:id', deleteAvailability);
 
 module.exports = router;

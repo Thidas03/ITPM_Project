@@ -1,7 +1,7 @@
 import api from '../../../services/api';
 
-export const getNotifications = async (recipientId) => {
-    const response = await api.get(`/notifications/${recipientId}`);
+export const getNotifications = async () => {
+    const response = await api.get(`/notifications`);
     return response.data;
 };
 
@@ -10,7 +10,7 @@ export const markAsRead = async (notificationId) => {
     return response.data;
 };
 
-export const markAllAsRead = async (recipientId) => {
-    const response = await api.put(`/notifications/${recipientId}/read-all`);
+export const markAllAsRead = async () => {
+    const response = await api.put(`/notifications/read-all`);
     return response.data;
 };

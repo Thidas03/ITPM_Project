@@ -319,10 +319,15 @@ const Profile = () => {
                                 </div>
 
                                 <div className="bg-gray-900 border border-gray-800 rounded-[2.5rem] p-8 shadow-2xl">
-                                    <h3 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center gap-2">
-                                        <span className="w-1.5 h-6 bg-teal-500 rounded-full"></span>
-                                        Full Session History
-                                    </h3>
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
+                                            <span className="w-1.5 h-6 bg-teal-500 rounded-full"></span>
+                                            Full Session History
+                                        </h3>
+                                        <Link to="/my-sessions" className="text-xs font-bold text-teal-400 hover:text-teal-300 bg-teal-500/10 hover:bg-teal-500/20 px-4 py-2 rounded-xl transition-colors border border-teal-500/20">
+                                            View Extended History ↗
+                                        </Link>
+                                    </div>
 
                                     <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                                         {bookings.length === 0 ? (

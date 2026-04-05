@@ -32,7 +32,7 @@ exports.registerUser = async (req, res) => {
     }
 
     // Password Strength Check
-    const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/;
     if (!passwordStrengthRegex.test(password)) {
         return res.status(400).json({ message: 'Password must contain at least 8 characters, one uppercase, one lowercase, one number, and one special character.' });
     }
@@ -315,7 +315,7 @@ exports.resetPassword = async (req, res) => {
     const { email, otp, newPassword } = req.body;
 
     // Password Strength Check
-    const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/;
     if (!passwordStrengthRegex.test(newPassword)) {
         return res.status(400).json({ message: 'Password must contain at least 8 characters, one uppercase, one lowercase, one number, and one special character.' });
     }
@@ -442,7 +442,7 @@ exports.changePassword = async (req, res) => {
     const { currentPassword, newPassword } = req.body;
 
     // Password Strength Check
-    const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/;
     if (!passwordStrengthRegex.test(newPassword)) {
         return res.status(400).json({ message: 'Password must contain at least 8 characters, one uppercase, one lowercase, one number, and one special character.' });
     }

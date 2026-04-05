@@ -1,20 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import TutorScheduleManager from '../features/sessions/components/TutorScheduleManager';
 import { getNotifications, markAllAsRead } from '../features/notifications/services/notificationService';
-
-// Mock Auth logic for tutor demo
-const getCurrentUser = () => {
-  return {
-    _id: '60d0fe4f5311236168a109ca',
-    role: 'tutor',
-    name: 'Alex Tutor'
-  };
-};
+import { useAuth } from '../context/AuthContext';
 
 const TutorDashboard = () => {
-  const user = getCurrentUser();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   useEffect(() => {
     fetchNotifications();
@@ -102,11 +97,39 @@ const TutorDashboard = () => {
               )}
             </div>
 
-            <div className="flex items-center gap-3">
-              <span className="text-gray-400 text-sm hidden sm:inline">Logged in as {user.name}</span>
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-teal-500 to-indigo-500 flex items-center justify-center font-bold">
-                {user.name.charAt(0)}
-              </div>
+            <div className="relative">
+              <button 
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="flex items-center gap-3 focus:outline-none hover:bg-gray-800/50 p-1.5 rounded-full transition-colors"
+               >
+                <span className="text-gray-400 text-sm hidden sm:inline">Logged in as {user?.firstName} {user?.lastName}</span>
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-teal-500 to-indigo-500 flex items-center justify-center font-bold relative overflow-hidden">
+                  {user?.profilePicture ? (
+                      <img src={user.profilePicture} alt="Profile" className="w-full h-full object-cover rounded-full" />
+                  ) : (
+                      (user?.firstName || 'T').charAt(0)
+                  )}
+                </div>
+              </button>
+
+              {showProfileMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden z-50">
+                  <div className="py-2">
+                    <button
+                      onClick={() => navigate('/profile')}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700/50 transition-colors"
+                    >
+                      Profile Management
+                    </button>
+                    <button
+                      onClick={() => navigate('/')}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700/50 transition-colors"
+                    >
+                      Back to Home
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

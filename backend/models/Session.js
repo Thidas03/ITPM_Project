@@ -36,17 +36,18 @@ const SessionSchema = new mongoose.Schema({
     meetingLink: {
         type: String,
         default: 'https://zoom.us/j/mock_meeting_id'
+    },
     maxParticipants: {
         type: Number,
         default: 1
     },
-    currentParticipants: {
+    price: {
         type: Number,
         default: 0
     },
-    meetingLink: {
-        type: String,
-        default: ''
+    currentParticipants: {
+        type: Number,
+        default: 0
     },
     createdAt: {
         type: Date,

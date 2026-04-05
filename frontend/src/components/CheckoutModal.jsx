@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './CheckoutModal.css';
 
-const CheckoutModal = ({ isOpen, onClose, selectedItem }) => {
+const CheckoutModal = ({ isOpen, onClose, selectedItem, onSuccess }) => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         name: '',
@@ -75,8 +75,12 @@ const CheckoutModal = ({ isOpen, onClose, selectedItem }) => {
             // without needing actual Stripe API keys.
             setTimeout(() => {
                 setIsProcessing(false);
-                onClose();
-                navigate('/success');
+                if (onSuccess) {
+                    onSuccess();
+                } else {
+                    onClose();
+                    navigate('/success');
+                }
             }, 1000);
         }
     };
@@ -90,7 +94,7 @@ const CheckoutModal = ({ isOpen, onClose, selectedItem }) => {
                 </div>
 
                 <div className="modal-body">
-                    <p className="price-tag">Total: ${selectedItem?.price}</p>
+                    <p className="price-tag">Total: Rs {selectedItem?.price}</p>
 
                     <form onSubmit={handleSubmit} className="checkout-form">
                         <div className="form-group">

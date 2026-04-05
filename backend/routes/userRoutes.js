@@ -3,6 +3,24 @@ const router = express.Router();
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
 
+// Get all tutors/hosts
+router.get('/tutors', async (req, res) => {
+    try {
+        const tutors = await User.find({ role: { $in: ['Host', 'tutor', 'Tutor'] } })
+            .select('_id firstName lastName email');
+        
+        const formattedTutors = tutors.map(t => ({
+            _id: t._id,
+            name: `${t.firstName} ${t.lastName}`.trim() || t.email
+        }));
+        
+        res.json({ success: true, data: formattedTutors });
+    } catch (error) {
+        console.error('Error fetching tutors:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch tutors' });
+    }
+});
+
 // Get purchase history for a specific user
 router.get('/purchases/:userId', async (req, res) => {
     try {

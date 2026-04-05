@@ -23,8 +23,7 @@
     "morgan": "^1.10.1",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.4",
-    "stripe": "^20.4.1"
-    "nodemailer": "^8.0.3",
+    "stripe": "^20.4.1",
     "otp-generator": "^4.0.1",
     "zxcvbn": "^4.4.2"
   },

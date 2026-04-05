@@ -25,13 +25,23 @@ exports.createAvailability = async (req, res) => {
   }
 };
 
+// GET BY TUTOR
 exports.getAvailabilityByTutor = async (req, res) => {
     try {
-        const { studentId } = req.query;
-        const availability = await Availability.find({
-            tutor: req.params.tutorId,
-            $expr: { $lt: [{ $size: "$enrolledStudents" }, "$maxStudents"] }
-        });
+        const { studentId, hideFull } = req.query;
+        
+        let query = { tutor: req.params.tutorId };
+        
+        if (hideFull === 'true') {
+            query.$expr = { 
+                $lt: [
+                    { $size: { $ifNull: ["$enrolledStudents", []] } }, 
+                    { $ifNull: ["$maxStudents", 10] }
+                ] 
+            };
+        }
+
+        const availability = await Availability.find(query);
 
         const formattedData = availability.map(slot => {
             const isBooked = studentId ? slot.enrolledStudents.includes(studentId) : false;
@@ -52,6 +62,9 @@ exports.getAvailabilityByTutor = async (req, res) => {
             success: false,
             message: error.message
         });
+    }
+};
+
 // GET ALL
 exports.getAllAvailability = async (req, res) => {
   try {
@@ -85,27 +98,6 @@ exports.getAvailabilityById = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: availability
-    });
-
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
-// GET BY TUTOR
-exports.getAvailabilityByTutor = async (req, res) => {
-  try {
-    const availability = await Availability.find({
-      tutor: req.params.tutorId
-    });
-
-    res.status(200).json({
-      success: true,
-      count: availability.length,
       data: availability
     });
 

@@ -1,13 +1,17 @@
 // frontend/src/pages/FeedbackPage.jsx
 
 import React, { useState } from "react";
+import { useLocation } from "react-router-dom";
 import { createFeedback } from "../services/feedbackService";
 
 const FeedbackPage = () => {
+  const location = useLocation();
+  const initialData = location.state || {};
+
   const [formData, setFormData] = useState({
-    sessionId: "",
-    studentId: "",
-    tutorId: "",
+    sessionId: initialData.sessionId || "",
+    studentId: initialData.studentId || "",
+    tutorId: initialData.tutorId || "",
     rating: "",
     comment: "",
     category: "General",

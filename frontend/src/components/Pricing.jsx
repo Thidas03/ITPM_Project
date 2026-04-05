@@ -78,7 +78,7 @@ const Pricing = () => {
                         {session.isPremium && <div className="badge">Featured</div>}
                         <h2 className="tier-name">{session.name}</h2>
                         <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>{session.instructor}</p>
-                        <div className="price">${session.price}<span>/session</span></div>
+                        <div className="price">Rs {session.price}<span>/session</span></div>
 
                         <ul className="features-list">
                             {session.features.map((feature, fIndex) => (
@@ -106,7 +106,7 @@ const Pricing = () => {
                         <div className="badge">Save 30%</div>
                         <h2 className="tier-name">{bundle.name}</h2>
                         <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>{bundle.instructor}</p>
-                        <div className="price">${bundle.price}<span>/bundle</span></div>
+                        <div className="price">Rs {bundle.price}<span>/bundle</span></div>
 
                         <ul className="features-list">
                             {bundle.features.map((feature, fIndex) => (

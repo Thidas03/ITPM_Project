@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const NotificationSchema = new mongoose.Schema({
-    user: {
     recipient: {
         type: mongoose.Schema.ObjectId,
         ref: 'User',
@@ -9,7 +8,7 @@ const NotificationSchema = new mongoose.Schema({
     },
     title: {
         type: String,
-        required: true
+        required: false
     },
     message: {
         type: String,
@@ -17,10 +16,8 @@ const NotificationSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['info', 'alert', 'urgent'],
+        enum: ['info', 'alert', 'urgent', 'booking', 'cancellation', 'system'],
         default: 'info'
-        enum: ['booking', 'cancellation', 'system'],
-        default: 'booking'
     },
     relatedBooking: {
         type: mongoose.Schema.ObjectId,
@@ -32,7 +29,6 @@ const NotificationSchema = new mongoose.Schema({
     },
     createdAt: {
         type: Date,
-        default: Date.now
         default: Date.now,
         expires: 604800 // 7 days
     }

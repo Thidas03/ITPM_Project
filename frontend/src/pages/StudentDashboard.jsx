@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SessionCard from '../features/sessions/components/SessionCard';
 import SessionDetailsModal from '../features/sessions/components/SessionDetailsModal';
 import ConfirmationModal from '../features/common/components/ConfirmationModal';
 import BookingModal from '../features/bookings/components/BookingModal';
+import CheckoutModal from '../components/CheckoutModal';
 import { getTutorAvailability } from '../features/sessions/services/availabilityService';
 import { getTutorSessions } from '../features/sessions/services/sessionService';
 import { getStudentBookings, cancelBooking, createSessionBooking } from '../features/bookings/services/bookingService';
@@ -10,19 +12,8 @@ import { getNotifications, markAllAsRead } from '../features/notifications/servi
 import { toast } from 'react-toastify';
 import { FaCalendarAlt, FaClock, FaUser, FaLink, FaCheckCircle, FaExclamationCircle, FaTimesCircle } from 'react-icons/fa';
 
-// Mock Auth logic for student demo
-const getCurrentUser = () => ({
-  _id: '60d0fe4f5311236168a109cb',
-  role: 'student',
-  name: 'Alex Student'
-});
-
-// Mock tutor list – in real app this would come from API
-const MOCK_TUTORS = [
-  { _id: '60d0fe4f5311236168a109ca', name: 'Alex Tutor' },
-  { _id: '60d0fe4f5311236168a109cc', name: 'Jordan Mentor' },
-  { _id: '60d0fe4f5311236168a109cd', name: 'Taylor Coach' }
-];
+import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 
 const parseSessionTime = (dateStr, timeStr) => {
   if (!dateStr || !timeStr || timeStr === 'N/A') return null;
@@ -41,9 +32,10 @@ const parseSessionTime = (dateStr, timeStr) => {
 };
 
 const StudentDashboard = () => {
-  const user = getCurrentUser();
-  // Default to the first mock tutor (matches TutorDashboard ID so sessions line up)
-  const [selectedTutorId, setSelectedTutorId] = useState(MOCK_TUTORS[0]._id);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [tutors, setTutors] = useState([]);
+  const [selectedTutorId, setSelectedTutorId] = useState('');
   const [availabilitySlots, setAvailabilitySlots] = useState([]);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [tutorSessions, setTutorSessions] = useState([]);
@@ -55,8 +47,31 @@ const StudentDashboard = () => {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  
+  // Checkout State
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [checkoutSessionData, setCheckoutSessionData] = useState(null);
 
   useEffect(() => {
+    fetchTutors();
+  }, []);
+
+  const fetchTutors = async () => {
+    try {
+      const response = await api.get('/users/tutors');
+      if (response.data.success && response.data.data.length > 0) {
+        setTutors(response.data.data);
+        setSelectedTutorId(response.data.data[0]._id);
+      }
+    } catch (error) {
+      console.error('Failed to fetch tutors', error);
+      toast.error('Failed to load tutors');
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedTutorId) return;
     fetchAvailableSlots();
     fetchTutorSessions();
     fetchStudentBookings();
@@ -134,7 +149,22 @@ const StudentDashboard = () => {
     setIsSessionModalOpen(true);
   };
 
-  const handleBookScheduledSession = async (session) => {
+  const handleInitiateSessionCheckout = (session) => {
+    if (!user?._id) return toast.error('Please login first');
+    setCheckoutSessionData({
+      id: session._id,
+      name: `Tutoring Session`,
+      price: session.price || 0,
+      originalSession: session
+    });
+    setIsSessionModalOpen(false);
+    setIsCheckoutModalOpen(true);
+  };
+
+  const handleProcessCheckoutSuccess = async () => {
+    if (!checkoutSessionData?.originalSession) return;
+    const session = checkoutSessionData.originalSession;
+    
     try {
       await createSessionBooking({
         student: user._id,
@@ -143,7 +173,6 @@ const StudentDashboard = () => {
       toast.success('Session booked successfully.');
       fetchTutorSessions();
       fetchStudentBookings();
-      setIsSessionModalOpen(false);
     } catch (error) {
       const msg = error?.response?.data?.message || 'Failed to book session';
       toast.warning(msg);
@@ -231,11 +260,39 @@ const StudentDashboard = () => {
               )}
             </div>
 
-            <div className="flex items-center gap-3">
-              <span className="text-gray-400 text-sm hidden sm:inline">Logged in as {user.name}</span>
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-teal-500 to-indigo-500 flex items-center justify-center font-bold">
-                {user.name.charAt(0)}
-              </div>
+            <div className="relative">
+              <button 
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="flex items-center gap-3 focus:outline-none hover:bg-gray-800/50 p-1.5 rounded-full transition-colors"
+               >
+                <span className="text-gray-400 text-sm hidden sm:inline">Logged in as {user?.firstName} {user?.lastName}</span>
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-teal-500 to-indigo-500 flex items-center justify-center font-bold relative overflow-hidden">
+                  {user?.profilePicture ? (
+                      <img src={user.profilePicture} alt="Profile" className="w-full h-full object-cover rounded-full" />
+                  ) : (
+                      (user?.firstName || 'S').charAt(0)
+                  )}
+                </div>
+              </button>
+
+              {showProfileMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden z-50">
+                  <div className="py-2">
+                    <button
+                      onClick={() => navigate('/profile')}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700/50 transition-colors"
+                    >
+                      Profile Management
+                    </button>
+                    <button
+                      onClick={() => navigate('/')}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700/50 transition-colors"
+                    >
+                      Back to Home
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -260,7 +317,7 @@ const StudentDashboard = () => {
                 value={selectedTutorId}
                 onChange={(e) => setSelectedTutorId(e.target.value)}
               >
-                {MOCK_TUTORS.map((tutor) => (
+                {tutors.map((tutor) => (
                   <option key={tutor._id} value={tutor._id} className="bg-gray-900 text-white">
                     {tutor.name}
                   </option>
@@ -469,6 +526,7 @@ const StudentDashboard = () => {
                         )}
                         {sessionPhase === 'completed' && booking.status !== 'cancelled' && (
                           <button
+                            onClick={() => navigate('/feedback', { state: { sessionId: booking.session?._id || booking._id, tutorId: booking.tutor?._id, studentId: user._id } })}
                             className="flex-1 md:flex-none px-4 py-2 rounded-xl border border-blue-500/50 text-blue-400 text-sm font-medium hover:bg-blue-500/10 transition-colors"
                           >
                             Give Feedback
@@ -489,8 +547,8 @@ const StudentDashboard = () => {
         isOpen={isSessionModalOpen}
         onClose={() => setIsSessionModalOpen(false)}
         session={selectedSession}
-        tutorName={MOCK_TUTORS.find(t => t._id === selectedTutorId)?.name}
-        onConfirm={handleBookScheduledSession}
+        tutorName={tutors.find(t => t._id === selectedTutorId)?.name}
+        onConfirm={handleInitiateSessionCheckout}
       />
 
       {/* Confirmation Modal */}
@@ -500,6 +558,14 @@ const StudentDashboard = () => {
         onConfirm={confirmCancelBooking}
         title="Cancel Booking"
         message="Are you sure you want to cancel this booking? You will lose your slot."
+      />
+
+      {/* Checkout Modal */}
+      <CheckoutModal
+        isOpen={isCheckoutModalOpen}
+        onClose={() => setIsCheckoutModalOpen(false)}
+        selectedItem={checkoutSessionData}
+        onSuccess={handleProcessCheckoutSuccess}
       />
 
     </div>

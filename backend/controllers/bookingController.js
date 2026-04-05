@@ -1,177 +1,227 @@
 const Booking = require('../models/Booking');
 const Session = require('../models/Session');
 const Availability = require('../models/Availability');
+const User = require('../models/User');
+const Notification = require('../models/Notification');
 
-// @desc    Create a new booking
+const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+const normalizeDate = (value) => {
+    const d = new Date(value);
+    d.setHours(0, 0, 0, 0);
+    return d;
+};
+
+// @desc    Create a new booking / CREATE BOOKING
 // @route   POST /api/bookings
 // @access  Private
 exports.createBooking = async (req, res) => {
     try {
-        const { session, notes } = req.body;
-        const student = req.user.id; // From protect middleware
+        const studentId = req.user.id; // From protect middleware
+        if (req.body.availability) {
+            const { availability: availabilityId, bookingDate } = req.body;
+            if (!availabilityId || !bookingDate) {
+                return res.status(400).json({ success: false, message: 'Missing fields' });
+            }
 
-        // Check if already booked
-        const existingBooking = await Booking.findOne({ session, student });
-        if (existingBooking) {
-            return res.status(400).json({ success: false, error: 'You have already booked this session' });
+            const bookingDay = normalizeDate(bookingDate);
+            const today = normalizeDate(new Date());
+            if (bookingDay < today) {
+                return res.status(400).json({ success: false, message: 'Cannot book past date' });
+            }
+
+            const availability = await Availability.findById(availabilityId);
+            if (!availability) {
+                return res.status(404).json({ success: false, message: 'Availability not found' });
+            }
+
+            const weekdayName = dayNames[bookingDay.getDay()];
+            if (weekdayName !== availability.dayOfWeek) {
+                return res.status(400).json({ success: false, message: `Must be a ${availability.dayOfWeek}` });
+            }
+
+            const conflict = await Booking.findOne({
+                availability: availabilityId,
+                bookingDate: bookingDay,
+                status: { $in: ['upcoming', 'confirmed'] }
+            });
+            if (conflict) {
+                return res.status(400).json({ success: false, message: 'Already booked' });
+            }
+
+            const meetingLink = `https://meet.jit.si/STUEDU-${Math.random().toString(36).substring(2, 12)}`;
+            const booking = await Booking.create({
+                student: studentId,
+                tutor: availability.tutor,
+                availability: availability._id,
+                bookingDate: bookingDay,
+                meetingLink,
+                status: 'confirmed'
+            });
+
+            try {
+                const studentUser = await User.findById(studentId);
+                const studentName = studentUser ? studentUser.firstName : 'Unknown';
+                await Notification.create({
+                    recipient: availability.tutor,
+                    message: `${studentName} booked your session for ${bookingDay.toDateString()} at ${availability.startTime}`,
+                    relatedBooking: booking._id,
+                    type: 'booking'
+                });
+            } catch (notifErr) {}
+
+            return res.status(201).json({ success: true, data: booking });
+        } else {
+            const { session, notes } = req.body;
+            const sessionDoc = await Session.findById(session);
+            if (!sessionDoc) return res.status(404).json({ message: 'Session not found' });
+
+            const existingBooking = await Booking.findOne({ session, student: studentId });
+            if (existingBooking) return res.status(400).json({ message: 'You have already booked this session' });
+
+            const booking = await Booking.create({
+                session,
+                student: studentId,
+                notes,
+                status: 'confirmed'
+            });
+
+            await Availability.findOneAndUpdate(
+                { _id: session },
+                { $addToSet: { enrolledStudents: studentId } }
+            );
+
+            return res.status(201).json({ success: true, booking });
         }
-
-        const booking = await Booking.create({
-            session,
-            student,
-            notes
-        });
-
-        // Update Availability slot (if applicable, or just notify)
-        // Note: Stripe flow normally handles this, but manual booking might need it
-        await Availability.findOneAndUpdate(
-            { _id: session }, // Assuming sessionId matches availabilityId for now or linked
-            { $addToSet: { enrolledStudents: student } }
-        );
-
-        res.status(201).json({
-            success: true,
-            data: booking
-        });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
-// @desc    Get current student bookings
-const User = require('../models/User');
-
-// @desc    Create new booking
-// @route   POST /api/bookings
-// @access  Private/Middle (Student)
-exports.createBooking = async (req, res) => {
+// CREATE BOOKING FOR A SCHEDULED SESSION
+exports.createSessionBooking = async (req, res) => {
     try {
-        const { session, notes } = req.body;
-        const studentId = req.user.id; // From authMiddleware
+        const { session: sessionId } = req.body;
+        const studentId = req.user.id;
 
-        // Check if session exists and is available
-        const sessionDoc = await Session.findById(session);
-        if (!sessionDoc) return res.status(404).json({ message: 'Session not found' });
-        if (sessionDoc.status !== 'available') return res.status(400).json({ message: 'Session is no longer available' });
+        const session = await Session.findById(sessionId);
+        if (!session) return res.status(404).json({ success: false, message: 'Session not found' });
 
-        // Check if student already booked this session
-        const existingBooking = await Booking.findOne({ session, student: studentId });
-        if (existingBooking) return res.status(400).json({ message: 'You have already booked this session' });
+        const sessionDay = normalizeDate(session.date);
+        if (session.status === 'cancelled' || session.status === 'completed') {
+            return res.status(400).json({ success: false, message: 'This session is no longer bookable' });
+        }
+        if (session.currentParticipants >= session.maxParticipants) {
+            return res.status(400).json({ success: false, message: 'This session is fully booked' });
+        }
 
+        const existing = await Booking.findOne({ student: studentId, session: sessionId, status: { $in: ['upcoming', 'confirmed'] } });
+        if (existing) return res.status(400).json({ success: false, message: 'You have already booked this session' });
+
+        const meetingLink = `https://meet.jit.si/STUEDU-${Math.random().toString(36).substring(2, 12)}`;
         const booking = await Booking.create({
-            session,
             student: studentId,
-            notes,
+            tutor: session.tutor,
+            session: session._id,
+            bookingDate: sessionDay,
+            meetingLink,
             status: 'confirmed'
         });
 
-        // Optional: mark session as booked (if only one student can book)
-        // sessionDoc.status = 'booked';
-        // await sessionDoc.save();
-
-        res.status(201).json({ success: true, booking });
-        
-        // Notify student of new booking
-        const user = await User.findById(studentId);
-        if (user && user.notificationPreferences?.onCreation) {
-            const Notification = require('../models/Notification');
-            await Notification.create({
-                user: studentId,
-                title: 'New Booking Confirmed',
-                message: `You've successfully booked "${sessionDoc.title}". Check your dashboard for details.`,
-                type: 'info'
-            });
+        session.currentParticipants += 1;
+        if (session.currentParticipants >= session.maxParticipants) {
+            session.status = 'booked';
         }
+        await session.save();
+
+        res.status(201).json({ success: true, data: booking });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ success: false, error: error.message });
     }
 };
 
 // @desc    Get current student's bookings
-// @route   GET /api/bookings/my-bookings
-// @access  Private
 exports.getStudentBookings = async (req, res) => {
     try {
         const bookings = await Booking.find({ student: req.user.id })
             .populate('session')
+            .populate('availability')
             .sort({ createdAt: -1 });
 
-        res.status(200).json({
-            success: true,
-            count: bookings.length,
-            data: bookings
-        });
+        res.status(200).json({ success: true, count: bookings.length, data: bookings });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
 };
 
-// @desc    Cancel a booking
-            .populate({
-                path: 'session',
-                populate: { path: 'tutor', select: 'firstName lastName email identityNumber' }
-            })
-            .sort('-createdAt');
+// GET BOOKINGS BY STUDENT (Admin or general)
+exports.getBookingsByStudent = async (req, res) => {
+    try {
+        const bookings = await Booking.find({ student: req.params.studentId })
+            .populate('tutor', 'firstName lastName email')
+            .populate('availability')
+            .populate('session')
+            .sort({ bookingDate: 1, createdAt: -1 });
 
-        res.json({ success: true, bookings });
+        res.status(200).json({ success: true, count: bookings.length, data: bookings });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// GET BOOKINGS BY TUTOR
+exports.getBookingsByTutor = async (req, res) => {
+    try {
+        const bookings = await Booking.find({ tutor: req.params.tutorId })
+            .populate('student', 'firstName lastName email')
+            .populate('availability')
+            .populate('session')
+            .sort({ bookingDate: 1, createdAt: -1 });
+
+        res.status(200).json({ success: true, count: bookings.length, data: bookings });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
 // @desc    Cancel booking
-// @route   PUT /api/bookings/:id/cancel
-// @access  Private
 exports.cancelBooking = async (req, res) => {
     try {
-        let booking = await Booking.findById(req.params.id);
+        const booking = await Booking.findById(req.params.id);
+        if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
 
-        if (!booking) {
-            return res.status(404).json({ success: false, error: 'Booking not found' });
-        }
-
-        // Make sure user owns the booking
-        if (booking.student.toString() !== req.user.id) {
-            return res.status(401).json({ success: false, error: 'Not authorized' });
+        if (booking.status === 'cancelled' || booking.status === 'completed') {
+            return res.status(400).json({ success: false, message: 'Cannot cancel a completed or cancelled booking' });
         }
 
         booking.status = 'cancelled';
         await booking.save();
 
-        // Release the slot in Availability
-        await Availability.findOneAndUpdate(
-            { _id: booking.session },
-            { $pull: { enrolledStudents: req.user.id } }
-        );
+        if (booking.session) {
+            const session = await Session.findById(booking.session);
+            if (session) {
+                session.currentParticipants = Math.max(0, session.currentParticipants - 1);
+                if (session.status === 'booked' && session.currentParticipants < session.maxParticipants) {
+                    session.status = 'available';
+                }
+                await session.save();
+            }
+            await Availability.findOneAndUpdate(
+                { _id: booking.session },
+                { $pull: { enrolledStudents: req.user.id } }
+            );
+        }
 
-        res.status(200).json({
-        const booking = await Booking.findOne({ _id: req.params.id, student: req.user.id });
-        if (!booking) return res.status(404).json({ message: 'Booking not found' });
-
-        if (booking.status !== 'confirmed') return res.status(400).json({ message: 'Cannot cancel a session that is already completed or cancelled' });
-
-        booking.status = 'cancelled';
-        await booking.save();
-
-        // penalty for cancellation could be added here if needed for trust score
-        const user = await User.findById(req.user.id);
-        user.cancellations += 1;
-        await user.save();
-
-        res.json({ success: true, message: 'Booking cancelled' });
+        res.status(200).json({ success: true, message: 'Booking cancelled successfully', data: booking });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
-// @desc    Complete booking (Join/Mark as attended)
-// @route   PUT /api/bookings/:id/complete
-// @access  Private
+// @desc    Complete booking
 exports.completeBooking = async (req, res) => {
     try {
-        const booking = await Booking.findOne({ _id: req.params.id, student: req.user.id })
-            .populate('session');
-            
+        const booking = await Booking.findOne({ _id: req.params.id, student: req.user.id }).populate('session');
         if (!booking) return res.status(404).json({ message: 'Booking not found' });
         if (booking.status === 'completed') return res.status(400).json({ message: 'Session already completed' });
 
@@ -180,11 +230,6 @@ exports.completeBooking = async (req, res) => {
         booking.attendanceStatus = 'attended';
         await booking.save();
 
-        // Update User stats
-        const user = await User.findById(req.user.id);
-        user.attendedSessions += 1;
-        await user.save();
-
         res.json({ success: true, message: 'Session marked as attended' });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -192,13 +237,10 @@ exports.completeBooking = async (req, res) => {
 };
 
 // @desc    Rate session
-// @route   PUT /api/bookings/:id/rate
-// @access  Private
 exports.rateBooking = async (req, res) => {
     try {
         const { rating, review } = req.body;
         const booking = await Booking.findOne({ _id: req.params.id, student: req.user.id });
-        
         if (!booking) return res.status(404).json({ message: 'Booking not found' });
         if (booking.status !== 'completed') return res.status(400).json({ message: 'You can only rate a completed session' });
 
@@ -211,369 +253,30 @@ exports.rateBooking = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
-const Availability = require('../models/Availability');
-const Session = require('../models/Session');
-const Notification = require('../models/Notification');
-const User = require('../models/User');
 
-const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-const normalizeDate = (value) => {
-    const d = new Date(value);
-    d.setHours(0, 0, 0, 0);
-    return d;
-};
-
-// CREATE BOOKING
-exports.createBooking = async (req, res) => {
-    try {
-        console.log('--- [START] createBooking ---');
-        console.log('Payload:', JSON.stringify(req.body));
-        const { student, availability: availabilityId, bookingDate } = req.body;
-
-        if (!student || !availabilityId || !bookingDate) {
-            console.warn('Missing fields');
-            return res.status(400).json({ success: false, message: 'Missing fields' });
-        }
-
-        const bookingDay = normalizeDate(bookingDate);
-        if (isNaN(bookingDay.getTime())) {
-            console.error('Invalid date string:', bookingDate);
-            return res.status(400).json({ success: false, message: 'Invalid date' });
-        }
-
-        const today = normalizeDate(new Date());
-        if (bookingDay < today) {
-            console.warn('Attempt to book past date:', bookingDay);
-            return res.status(400).json({ success: false, message: 'Cannot book past date' });
-        }
-
-        const availability = await Availability.findById(availabilityId);
-        if (!availability) {
-            console.error('Availability not found ID:', availabilityId);
-            return res.status(404).json({ success: false, message: 'Availability not found' });
-        }
-        console.log('Found Availability:', availability.dayOfWeek, availability.startTime);
-
-        const weekdayName = dayNames[bookingDay.getDay()];
-        if (weekdayName !== availability.dayOfWeek) {
-            console.warn('Weekday mismatch. Slot is:', availability.dayOfWeek, 'but requested date is:', weekdayName);
-            return res.status(400).json({ success: false, message: `Must be a ${availability.dayOfWeek}` });
-        }
-
-        const conflict = await Booking.findOne({
-            availability: availabilityId,
-            bookingDate: bookingDay,
-            status: { $in: ['upcoming'] }
-        });
-        if (conflict) {
-            console.warn('Conflict found with booking ID:', conflict._id);
-            return res.status(400).json({ success: false, message: 'Already booked' });
-        }
-
-        const meetingLink = `https://meet.jit.si/STUEDU-${Math.random().toString(36).substring(2, 12)}`;
-        console.log('Creating Booking Record...');
-        const booking = await Booking.create({
-            student,
-            tutor: availability.tutor,
-            availability: availability._id,
-            bookingDate: bookingDay,
-            meetingLink
-        });
-        console.log('Booking Saved ID:', booking._id);
-
-        try {
-            console.log('Fetching Student Info for Notification...');
-            const studentUser = await User.findById(student);
-            const studentName = studentUser ? studentUser.name : 'Unknown Student';
-            console.log('Student Name:', studentName);
-
-            console.log('Creating Notification for Tutor:', availability.tutor);
-            await Notification.create({
-                recipient: availability.tutor,
-                message: `${studentName} booked your session for ${bookingDay.toDateString()} at ${availability.startTime}`,
-                relatedBooking: booking._id,
-                type: 'booking'
-            });
-            console.log('Notification Success');
-        } catch (notifErr) {
-            console.error('NOTIFICATION ERROR (NON-BLOCKING):', notifErr.message);
-        }
-
-        console.log('--- [SUCCESS] createBooking ---');
-        res.status(201).json({ success: true, data: booking });
-    } catch (err) {
-        console.error('CRITICAL createBooking ERROR:', err);
-        res.status(500).json({ success: false, message: err.message });
-    }
-};
-
-// CREATE BOOKING FOR A SCHEDULED SESSION
-exports.createSessionBooking = async (req, res) => {
-    try {
-        console.log('--- CREATE SESSION BOOKING ATTEMPT ---');
-        console.log('Request Body:', req.body);
-        const { student, session: sessionId } = req.body;
-
-        if (!student || !sessionId) {
-            return res.status(400).json({
-                success: false,
-                message: 'student and session are required'
-            });
-        }
-
-        const session = await Session.findById(sessionId);
-        if (!session) {
-            return res.status(404).json({
-                success: false,
-                message: 'Session not found'
-            });
-        }
-
-        const today = normalizeDate(new Date());
-        const sessionDay = normalizeDate(session.date);
-        if (sessionDay < today) {
-            return res.status(400).json({
-                success: false,
-                message: 'Cannot book a past session'
-            });
-        }
-
-        if (session.status === 'cancelled' || session.status === 'completed') {
-            return res.status(400).json({
-                success: false,
-                message: 'This session is no longer bookable'
-            });
-        }
-
-        if (session.currentParticipants >= session.maxParticipants) {
-            return res.status(400).json({
-                success: false,
-                message: 'This session is fully booked'
-            });
-        }
-
-        // Prevent same student booking the same session twice
-        const existing = await Booking.findOne({
-            student,
-            session: sessionId,
-            status: { $in: ['upcoming'] }
-        });
-
-        if (existing) {
-            return res.status(400).json({
-                success: false,
-                message: 'You have already booked this session'
-            });
-        }
-
-        // Create booking record
-        const meetingLink = `https://meet.jit.si/STUEDU-${Math.random().toString(36).substring(2, 12)}`;
-        const booking = await Booking.create({
-            student,
-            tutor: session.tutor,
-            session: session._id,
-            bookingDate: sessionDay,
-            meetingLink
-        });
-
-        console.log('Session Booking Created Successfully:', booking._id);
-
-        // Separate try/catch for notification
-        try {
-            // Get student name for notification
-            const studentUser = await User.findById(student);
-            const studentName = studentUser ? studentUser.name : 'A student';
-
-            // Create notification for tutor
-            await Notification.create({
-                recipient: session.tutor,
-                message: `${studentName} joined your scheduled session for ${sessionDay.toLocaleDateString()} at ${session.startTime}`,
-                relatedBooking: booking._id,
-                type: 'booking'
-            });
-            console.log('Notification Created for Tutor:', session.tutor);
-        } catch (notificationError) {
-            console.error('FAILED TO CREATE NOTIFICATION:', notificationError.message);
-        }
-
-        // Update session participation
-        session.currentParticipants += 1;
-        if (session.currentParticipants >= session.maxParticipants) {
-            session.status = 'booked';
-        }
-        await session.save();
-
-        res.status(201).json({
-            success: true,
-            data: booking
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-};
-
-// @desc    Get session details (Protected Access)
-// @route   GET /api/bookings/session/:sessionId
-// @access  Private
+// @desc    Get session details
 exports.getSessionDetails = async (req, res) => {
     try {
         const sessionId = req.params.sessionId;
         const studentId = req.user.id;
-
-        // Check if the student is enrolled in this session
-        // We can check the Availability model's enrolledStudents array
         const availability = await Availability.findById(sessionId);
 
-        if (!availability) {
-            return res.status(404).json({ success: false, error: 'Session not found' });
-        }
+        if (!availability) return res.status(404).json({ success: false, error: 'Session not found' });
 
         if (!availability.enrolledStudents.includes(studentId)) {
-            return res.status(403).json({ 
-                success: false, 
-                error: 'Access Denied: You must book this session to view meeting details' 
-            });
+            return res.status(403).json({ success: false, error: 'Access Denied: You must book this session to view details' });
         }
 
-        // Mocking the sensitive data if a real Session model instance doesn't exist yet
-        // In a real app, you'd do: const session = await Session.findById(...)
         const sessionDetails = {
             id: availability._id,
             startTime: availability.startTime,
             endTime: availability.endTime,
-            meetingLink: 'https://zoom.us/j/mock_meeting_' + availability._id,
+            meetingLink: 'https://meet.jit.si/' + availability._id,
             password: 'STU_PASS_' + availability._id.toString().slice(-4).toUpperCase()
         };
 
-        res.status(200).json({
-            success: true,
-            data: sessionDetails
-        });
+        res.status(200).json({ success: true, data: sessionDetails });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
 };
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-};
-
-// GET BOOKINGS BY STUDENT
-exports.getBookingsByStudent = async (req, res) => {
-    try {
-        const bookings = await Booking.find({ student: req.params.studentId })
-            .populate('tutor', 'name email')
-            .populate('availability')
-            .populate('session')
-            .sort({ bookingDate: 1, createdAt: -1 });
-
-        res.status(200).json({
-            success: true,
-            count: bookings.length,
-            data: bookings
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-};
-
-// GET BOOKINGS BY TUTOR
-exports.getBookingsByTutor = async (req, res) => {
-    try {
-        const bookings = await Booking.find({ tutor: req.params.tutorId })
-            .populate('student', 'name email')
-            .populate('availability')
-            .populate('session')
-            .sort({ bookingDate: 1, createdAt: -1 });
-
-        res.status(200).json({
-            success: true,
-            count: bookings.length,
-            data: bookings
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-};
-
-// CANCEL BOOKING
-exports.cancelBooking = async (req, res) => {
-    try {
-        const booking = await Booking.findById(req.params.id);
-
-        if (!booking) {
-            return res.status(404).json({
-                success: false,
-                message: 'Booking not found'
-            });
-        }
-
-        if (booking.status === 'cancelled') {
-            return res.status(400).json({
-                success: false,
-                message: 'Booking is already cancelled'
-            });
-        }
-
-        if (booking.status === 'completed') {
-            return res.status(400).json({
-                success: false,
-                message: 'Completed bookings cannot be cancelled'
-            });
-        }
-
-        booking.status = 'cancelled';
-        await booking.save();
-
-        // Create cancellation notification for the tutor
-        try {
-            const studentUser = await User.findById(booking.student);
-            const studentName = studentUser ? studentUser.name : 'A student';
-            const bookingDateStr = new Date(booking.bookingDate).toLocaleDateString();
-
-            await Notification.create({
-                recipient: booking.tutor,
-                message: `${studentName} cancelled their booking for ${bookingDateStr}.`,
-                relatedBooking: booking._id,
-                type: 'booking'
-            });
-            console.log('Cancellation Notification Created for Tutor:', booking.tutor);
-        } catch (notificationError) {
-            console.error('FAILED TO CREATE CANCELLATION NOTIFICATION:', notificationError.message);
-        }
-
-        // Free the availability slot logic removed to support recurring weekly bookings
-
-        // Or adjust session participation if this booking was for a session
-        if (booking.session) {
-            const session = await Session.findById(booking.session);
-            if (session) {
-                session.currentParticipants = Math.max(0, session.currentParticipants - 1);
-                if (session.status === 'booked' && session.currentParticipants < session.maxParticipants) {
-                    session.status = 'available';
-                }
-                await session.save();
-            }
-        }
-
-        res.status(200).json({
-            success: true,
-            data: booking
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: error.message
-        });
-    }
-};
-

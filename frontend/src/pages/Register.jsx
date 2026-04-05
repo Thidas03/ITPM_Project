@@ -42,15 +42,9 @@ const Register = () => {
     const onSubmit = async (e) => {
         e.preventDefault();
 
-        // Name Validation
-        if (!/^[A-Z]/.test(firstName)) {
-            toast.error('First name must start with a capital letter');
-            return;
-        }
-        if (!/^[A-Z]/.test(lastName)) {
-            toast.error('Last name must start with a capital letter');
-            return;
-        }
+        // Auto-capitalize first and last names for convenience
+        const formattedFirstName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+        const formattedLastName = lastName.charAt(0).toUpperCase() + lastName.slice(1);
 
         // Phone Number Validation
         const phoneDigits = contactNumber.replace(/\D/g, '');
@@ -69,7 +63,13 @@ const Register = () => {
             return;
         }
 
-        const res = await register({ firstName, lastName, contactNumber, email, password, role });
+        const passwordStrengthRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/;
+        if (!passwordStrengthRegex.test(password)) {
+            toast.error('Password must contain at least 8 characters, one uppercase, one lowercase, one number, and one special character.');
+            return;
+        }
+
+        const res = await register({ firstName: formattedFirstName, lastName: formattedLastName, contactNumber, email, password, role });
 
         if (res.success) {
             toast.success('Registration successful! Please log in.');
@@ -161,6 +161,7 @@ const Register = () => {
                                     <div className="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
                                         <div className={`h-full ${strength.color} transition-all duration-300`} style={{ width: strength.width }}></div>
                                     </div>
+                                    <p className="text-[10px] text-gray-500 mt-1">Requires 8+ chars, 1 uppercase, 1 lowercase, 1 number, 1 special character.</p>
                                 </div>
                             )}
                         </div>

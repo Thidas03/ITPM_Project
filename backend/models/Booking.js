@@ -50,6 +50,9 @@ const BookingSchema = new mongoose.Schema({
         maxlength: 500
     },
     notes: {
+        type: String,
+        maxlength: 500
+    },
     meetingLink: {
         type: String,
         required: true

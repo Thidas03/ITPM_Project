@@ -47,9 +47,7 @@ const Dashboard = () => {
         if (user) {
             fetchTrustProfile();
         }
-
-        if (user && user.role === 'Student') {
-            fetchAvailableSessions();
+    }, [user]);
     const [selectedAvailabilityToBook, setSelectedAvailabilityToBook] = useState(null);
     const [studentBookings, setStudentBookings] = useState([]);
     const [loadingBookings, setLoadingBookings] = useState(false);
@@ -64,13 +62,8 @@ const Dashboard = () => {
 
     const fetchAvailableSlots = async () => {
         try {
-            const data = await getTutorSessions(selectedTutorId, user._id);
-            // Show all sessions (the service now marks isBookedByMe)
-            const available = data.data || data;
-            setSessions(available);
-            const data = await getTutorAvailability(selectedTutorId);
-            // Only show availability slots that are not booked
-            const available = (data.data || data).filter(a => !a.isBooked);
+            const availData = await getTutorAvailability(selectedTutorId);
+            const available = (availData.data || availData).filter(a => !a.isBooked);
             setAvailabilitySlots(available);
         } catch (error) {
             console.error("Failed to fetch availability slots", error);
@@ -119,14 +112,6 @@ const Dashboard = () => {
             {/* Top Navbar */}
             <nav className="border-b border-gray-700 bg-gray-800/80 backdrop-blur-md sticky top-0 z-40">
                 <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-                    <div className="text-xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-indigo-600 shrink-0">
-                        StuEdu
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <span className="text-gray-400 text-sm hidden sm:inline">Logged in as {user.name}</span>
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-teal-500 to-indigo-600 flex items-center justify-center font-bold">
-                            {user.name.charAt(0)}
-                        </div>
                     <div className="text-xl font-black text-teal-400 shrink-0">
                         STUEDU
                     </div>
@@ -249,39 +234,6 @@ const Dashboard = () => {
                             <SmartSlotRecommend tutorId={selectedTutorId} onBook={handleBookClick} />
                         </div>
 
-                        {/* All Available Slots */}
-                        <div>
-                            <h2 className="text-2xl font-bold text-gray-300 mb-6 border-b border-gray-700 pb-2">All Available Slots</h2>
-
-                            {sessions.length === 0 ? (
-                                <div className="text-center py-20 bg-gray-800 rounded-3xl border border-gray-700 border-dashed shadow-sm">
-                                    <p className="text-xl text-gray-400 mb-2 font-semibold">No available slots found.</p>
-                                    <p className="text-slate-400 text-sm">The tutor has not set their availability yet.</p>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                    {sessions.map(session => (
-                                        <SessionCard
-                                            key={session._id}
-                                            session={session}
-                                            onBook={handleBookClick}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </>
-                )}
-                <header className="mb-10">
-                    <h1 className="text-4xl font-bold mb-3">Book a Session</h1>
-                    <p className="text-gray-400 text-lg">Find the perfect time with your tutor.</p>
-                </header>
-
-                {/* Smart Recommendation Banner (can still use sessions if desired) */}
-                <div className="mb-12">
-                    <SmartSlotRecommend tutorId={selectedTutorId} onBook={handleBookClick} />
-                </div>
-
                 {/* All Available Weekly Slots */}
                 <div>
                     <h2 className="text-2xl font-semibold mb-6 border-b border-gray-800 pb-2">All Available Weekly Slots</h2>
@@ -382,6 +334,8 @@ const Dashboard = () => {
                         </div>
                     )}
                 </div>
+                </>
+                )}
             </main>
 
             <BookingModal

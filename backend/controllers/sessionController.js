@@ -4,7 +4,7 @@ const Booking = require('../models/Booking');
 // CREATE SESSION
 exports.createSession = async (req, res) => {
     try {
-        const { tutor, date, startTime, endTime, maxParticipants, meetingLink } = req.body;
+        const { tutor, date, startTime, endTime, maxParticipants, price, meetingLink } = req.body;
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -44,6 +44,7 @@ exports.createSession = async (req, res) => {
             startTime,
             endTime,
             maxParticipants: maxParticipants || 1,
+            price: price || 0,
             meetingLink: meetingLink || ''
         });
 
@@ -101,7 +102,7 @@ exports.deleteSession = async (req, res) => {
 // UPDATE SESSION
 exports.updateSession = async (req, res) => {
     try {
-        const { date, startTime, endTime, maxParticipants, meetingLink } = req.body;
+        const { date, startTime, endTime, maxParticipants, price, meetingLink } = req.body;
 
         if (date) {
             const today = new Date();
@@ -139,7 +140,7 @@ exports.updateSession = async (req, res) => {
 
         const session = await Session.findByIdAndUpdate(
             req.params.sessionId,
-            { date, startTime, endTime, maxParticipants, meetingLink },
+            { date, startTime, endTime, maxParticipants, price, meetingLink },
             { new: true, runValidators: true }
         );
 
