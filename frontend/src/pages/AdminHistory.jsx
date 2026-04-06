@@ -3,6 +3,8 @@ import api from '../services/api';
 import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
 
+import AdminSidebar from '../components/AdminSidebar';
+
 const AdminHistory = () => {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -30,12 +32,14 @@ const AdminHistory = () => {
     );
 
     return (
-        <div className="min-h-screen bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-[#f8fafc] flex">
+            <AdminSidebar activeTab="history_link" />
+            <div className="flex-1 py-12 px-4 sm:px-6 lg:px-8 overflow-y-auto">
             <div className="max-w-6xl mx-auto">
                 <div className="mb-8 flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-extrabold text-gray-300">My Admin History</h1>
-                        <p className="mt-2 text-gray-400">A log of all management actions you have performed in the system.</p>
+                        <h1 className="text-3xl font-black text-slate-800 uppercase tracking-tight">My Admin History</h1>
+                        <p className="mt-2 text-slate-500 font-medium">A log of all management actions you have performed in the system.</p>
                     </div>
                     <Link to="/admin" className="text-teal-500 hover:text-teal-400 font-bold">
                         &larr; Admin Dashboard
@@ -88,6 +92,7 @@ const AdminHistory = () => {
                             </tbody>
                         </table>
                     </div>
+                </div>
                 </div>
             </div>
         </div>
