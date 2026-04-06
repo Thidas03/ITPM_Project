@@ -56,7 +56,7 @@ exports.createBooking = async (req, res) => {
                 availability: availability._id,
                 bookingDate: bookingDay,
                 meetingLink,
-                status: 'confirmed'
+                status: 'upcoming'
             });
 
             try {
@@ -83,7 +83,7 @@ exports.createBooking = async (req, res) => {
                 session,
                 student: studentId,
                 notes,
-                status: 'confirmed'
+                status: 'upcoming'
             });
 
             await Availability.findOneAndUpdate(
@@ -125,7 +125,7 @@ exports.createSessionBooking = async (req, res) => {
             session: session._id,
             bookingDate: sessionDay,
             meetingLink,
-            status: 'confirmed'
+            status: 'upcoming'
         });
 
         session.currentParticipants += 1;
@@ -136,7 +136,8 @@ exports.createSessionBooking = async (req, res) => {
 
         res.status(201).json({ success: true, data: booking });
     } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+        console.error(error);
+        res.status(500).json({ success: false, error: error.message, stack: error.stack, message: error.message });
     }
 };
 

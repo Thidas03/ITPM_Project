@@ -5,13 +5,13 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [token, setToken] = useState(localStorage.getItem('token'));
+    const [token, setToken] = useState(sessionStorage.getItem('token'));
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (token) {
-            // User data is already in localStorage, let's load it
-            const savedUser = JSON.parse(localStorage.getItem('user'));
+            // User data is already in sessionStorage, let's load it
+            const savedUser = JSON.parse(sessionStorage.getItem('user'));
             if (savedUser) {
                 setUser(savedUser);
             }
@@ -29,8 +29,8 @@ export const AuthProvider = ({ children }) => {
 
             setUser(data.user);
             setToken(data.token);
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
+            sessionStorage.setItem('token', data.token);
+            sessionStorage.setItem('user', JSON.stringify(data.user));
             return { success: true };
         } catch (error) {
             return {
@@ -45,8 +45,8 @@ export const AuthProvider = ({ children }) => {
             const { data } = await api.post('/auth/verify-2fa', { userId, otp });
             setUser(data.user);
             setToken(data.token);
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
+            sessionStorage.setItem('token', data.token);
+            sessionStorage.setItem('user', JSON.stringify(data.user));
             return { success: true };
         } catch (error) {
             return {
@@ -61,8 +61,8 @@ export const AuthProvider = ({ children }) => {
             const { data } = await api.post('/auth/google', { tokenId });
             setUser(data.user);
             setToken(data.token);
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
+            sessionStorage.setItem('token', data.token);
+            sessionStorage.setItem('user', JSON.stringify(data.user));
             return { success: true };
         } catch (error) {
             return {
@@ -138,14 +138,14 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         setUser(null);
         setToken(null);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
     };
 
     const updateProfile = (updatedUserData) => {
         const newUser = { ...user, ...updatedUserData };
         setUser(newUser);
-        localStorage.setItem('user', JSON.stringify(newUser));
+        sessionStorage.setItem('user', JSON.stringify(newUser));
     };
 
     return (

@@ -16,7 +16,7 @@ const Login = () => {
         const res = await login(email, password);
         if (res.success) {
             toast.success('Login successful!');
-            const loggedInUser = JSON.parse(localStorage.getItem('user'));
+            const loggedInUser = JSON.parse(sessionStorage.getItem('user'));
             if (loggedInUser?.role === 'Student') {
                 navigate('/dashboard/student');
             } else if (loggedInUser?.role === 'Host' || loggedInUser?.role === 'Tutor') {
@@ -35,7 +35,7 @@ const Login = () => {
         const res = await googleLogin(credentialResponse.credential);
         if (res.success) {
             toast.success('Google Login successful!');
-            const loggedInUser = JSON.parse(localStorage.getItem('user'));
+            const loggedInUser = JSON.parse(sessionStorage.getItem('user'));
             if (loggedInUser?.role === 'Student') {
                 navigate('/dashboard/student');
             } else if (loggedInUser?.role === 'Host' || loggedInUser?.role === 'Tutor') {

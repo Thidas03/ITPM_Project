@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { getStudentBookings } from '../features/bookings/services/bookingService';
 
 const Profile = () => {
-    const { updateProfile } = useAuth();
+    const { user, updateProfile } = useAuth();
     const [activeSection, setActiveSection] = useState('overview');
     const [formData, setFormData] = useState({
         firstName: '',
@@ -65,10 +65,11 @@ const Profile = () => {
                     setTrustData(trustRes.data);
                 }
 
-                const bookingRes = await getStudentBookings();
-                // getStudentBookings returns the data directly based on the service implementation
-                if (bookingRes && bookingRes.bookings) {
-                    setBookings(bookingRes.bookings);
+                if (user?._id) {
+                    const bookingRes = await getStudentBookings(user._id);
+                    if (bookingRes && bookingRes.data) {
+                        setBookings(bookingRes.data);
+                    }
                 }
             } catch (error) {
                 toast.error(error.response?.data?.message || 'Failed to fetch profile data');
@@ -168,6 +169,12 @@ const Profile = () => {
         );
     }
 
+    const completedBookings = bookings.filter(b => b.status === 'completed');
+    const attendedCount = completedBookings.filter(b => b.attended).length;
+    const missedCount = bookings.filter(b => (b.status === 'completed' && !b.attended) || (b.status === 'confirmed' && new Date(b.session?.date || new Date()) < new Date())).length;
+    const cancelledCount = bookings.filter(b => b.status === 'cancelled').length;
+    const attendancePercentage = completedBookings.length > 0 ? Math.round((attendedCount / completedBookings.length) * 100) : 0;
+
     const sections = [
         { id: 'overview', label: 'Overview', icon: '👤' },
         { id: 'activity', label: 'Activity & Sessions', icon: '📈' },
@@ -183,7 +190,10 @@ const Profile = () => {
                         <h1 className="text-4xl font-black text-white tracking-tight italic">MY PROFILE</h1>
                         <p className="mt-2 text-gray-400 font-medium tracking-tight">Configure your campus identity and security preferences.</p>
                     </div>
-                    <Link to="/dashboard" className="w-fit px-6 py-2.5 bg-gray-900 border border-gray-800 text-gray-400 hover:text-white hover:border-gray-700 rounded-2xl font-bold transition flex items-center gap-2">
+                    <Link 
+                        to={user?.role === 'Host' ? "/dashboard/tutor" : user?.role === 'Admin' ? "/admin" : "/dashboard/student"} 
+                        className="w-fit px-6 py-2.5 bg-gray-900 border border-gray-800 text-gray-400 hover:text-white hover:border-gray-700 rounded-2xl font-bold transition flex items-center gap-2"
+                    >
                         ← Back to Hub
                     </Link>
                 </div>
@@ -302,19 +312,19 @@ const Profile = () => {
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <div className="bg-gray-900 p-6 rounded-3xl border border-gray-800 text-center shadow-xl">
                                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Attendance</p>
-                                        <p className="text-3xl font-black text-teal-500">{trustData.stats.attendanceRate}%</p>
+                                        <p className="text-3xl font-black text-teal-500">{attendancePercentage}%</p>
                                     </div>
                                     <div className="bg-gray-900 p-6 rounded-3xl border border-gray-800 text-center shadow-xl">
                                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Attended</p>
-                                        <p className="text-3xl font-black text-green-500">{trustData.stats.attended}</p>
+                                        <p className="text-3xl font-black text-green-500">{attendedCount}</p>
                                     </div>
                                     <div className="bg-gray-900 p-6 rounded-3xl border border-gray-800 text-center shadow-xl">
                                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Missed</p>
-                                        <p className="text-3xl font-black text-red-500">{trustData.stats.missed}</p>
+                                        <p className="text-3xl font-black text-red-500">{missedCount}</p>
                                     </div>
                                     <div className="bg-gray-900 p-6 rounded-3xl border border-gray-800 text-center shadow-xl">
                                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Cancelled</p>
-                                        <p className="text-3xl font-black text-amber-500">{trustData.stats.cancellations}</p>
+                                        <p className="text-3xl font-black text-amber-500">{cancelledCount}</p>
                                     </div>
                                 </div>
 
@@ -437,7 +447,7 @@ const Profile = () => {
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                     {[
                                                         { label: 'Trust Percentage > 75%', met: trustData.trustPercentage > 75 },
-                                                        { label: 'Attended Sessions >= 5', met: trustData.stats.attended >= 5 },
+                                                        { label: 'Attended Sessions >= 5', met: attendedCount >= 5 },
                                                         { label: 'Clean Conduct Record', met: formData.misconductCount === 0 },
                                                         { label: 'Reputation Rating > 4.0', met: formData.averageRating > 4.0 }
                                                     ].map((req, i) => (
@@ -452,8 +462,8 @@ const Profile = () => {
                                             {formData.role !== 'Host' && formData.role !== 'Admin' && (
                                                 <button
                                                     onClick={handleRoleUpgrade}
-                                                    disabled={formData.tutorRequestStatus === 'pending' || !(trustData.trustPercentage > 75 && trustData.stats.attended >= 5 && formData.misconductCount === 0 && formData.averageRating > 4.0)}
-                                                    className={`w-full py-5 rounded-[2rem] font-black uppercase tracking-[0.2em] text-xs transition-all shadow-2xl ${formData.tutorRequestStatus === 'pending' ? 'bg-amber-500/20 text-amber-500 cursor-not-allowed' : (trustData.trustPercentage > 75 && trustData.stats.attended >= 5 && formData.misconductCount === 0 && formData.averageRating > 4.0 ? 'bg-white text-gray-900 hover:scale-[1.02] active:scale-[0.98]' : 'bg-gray-800 text-gray-600 cursor-not-allowed')}`}
+                                                    disabled={formData.tutorRequestStatus === 'pending' || !(trustData.trustPercentage > 75 && attendedCount >= 5 && formData.misconductCount === 0 && formData.averageRating > 4.0)}
+                                                    className={`w-full py-5 rounded-[2rem] font-black uppercase tracking-[0.2em] text-xs transition-all shadow-2xl ${formData.tutorRequestStatus === 'pending' ? 'bg-amber-500/20 text-amber-500 cursor-not-allowed' : (trustData.trustPercentage > 75 && attendedCount >= 5 && formData.misconductCount === 0 && formData.averageRating > 4.0 ? 'bg-white text-gray-900 hover:scale-[1.02] active:scale-[0.98]' : 'bg-gray-800 text-gray-600 cursor-not-allowed')}`}
                                                 >
                                                     {formData.tutorRequestStatus === 'pending' ? 'Application Under Review' : 'Initiate Upgrade Request'}
                                                 </button>

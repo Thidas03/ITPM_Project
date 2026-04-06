@@ -53,14 +53,14 @@ const FeedbackPage = () => {
   };
 
   const handleFillDemoData = () => {
-    setFormData({
-      sessionId: "SES-101",
-      studentId: "STU-2023001",
-      tutorId: "TUT-450",
+    setFormData((prev) => ({
+      sessionId: prev.sessionId || "SES-101",
+      studentId: prev.studentId || "STU-2023001",
+      tutorId: prev.tutorId || "TUT-450",
       rating: "5",
       comment: "The tutor explained the lesson very clearly and was very helpful.",
       category: "Teaching Quality",
-    });
+    }));
     setErrors({});
     setSuccessMessage("");
     setServerError("");

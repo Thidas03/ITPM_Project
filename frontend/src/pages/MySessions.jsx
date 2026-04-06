@@ -18,8 +18,8 @@ const MySessions = () => {
     const fetchBookings = async () => {
         try {
             setLoading(true);
-            const data = await getStudentBookings();
-            setBookings(data.bookings);
+            const data = await getStudentBookings(user._id);
+            setBookings(data.data || []);
         } catch (error) {
             toast.error('Failed to fetch your sessions');
         } finally {

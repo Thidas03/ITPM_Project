@@ -75,10 +75,10 @@ const CheckoutModal = ({ isOpen, onClose, selectedItem, onSuccess }) => {
             // without needing actual Stripe API keys.
             setTimeout(() => {
                 setIsProcessing(false);
+                onClose();
                 if (onSuccess) {
                     onSuccess();
                 } else {
-                    onClose();
                     navigate('/success');
                 }
             }, 1000);
@@ -124,7 +124,15 @@ const CheckoutModal = ({ isOpen, onClose, selectedItem, onSuccess }) => {
                             <input
                                 type="text"
                                 value={formData.cardNumber}
-                                onChange={(e) => setFormData({ ...formData, cardNumber: e.target.value })}
+                                onChange={(e) => {
+                                    let value = e.target.value.replace(/\D/g, '');
+                                    let formattedValue = '';
+                                    for (let i = 0; i < value.length; i++) {
+                                        if (i > 0 && i % 4 === 0) formattedValue += ' ';
+                                        formattedValue += value[i];
+                                    }
+                                    setFormData({ ...formData, cardNumber: formattedValue });
+                                }}
                                 placeholder="XXXX XXXX XXXX XXXX"
                                 maxLength="19"
                             />
@@ -137,7 +145,13 @@ const CheckoutModal = ({ isOpen, onClose, selectedItem, onSuccess }) => {
                                 <input
                                     type="text"
                                     value={formData.expiry}
-                                    onChange={(e) => setFormData({ ...formData, expiry: e.target.value })}
+                                    onChange={(e) => {
+                                        let value = e.target.value.replace(/\D/g, '');
+                                        if (value.length > 2) {
+                                            value = value.slice(0, 2) + '/' + value.slice(2, 4);
+                                        }
+                                        setFormData({ ...formData, expiry: value });
+                                    }}
                                     placeholder="MM/YY"
                                     maxLength="5"
                                 />
@@ -148,7 +162,10 @@ const CheckoutModal = ({ isOpen, onClose, selectedItem, onSuccess }) => {
                                 <input
                                     type="text"
                                     value={formData.cvc}
-                                    onChange={(e) => setFormData({ ...formData, cvc: e.target.value })}
+                                    onChange={(e) => {
+                                        const value = e.target.value.replace(/\D/g, '');
+                                        setFormData({ ...formData, cvc: value });
+                                    }}
                                     placeholder="123"
                                     maxLength="4"
                                 />

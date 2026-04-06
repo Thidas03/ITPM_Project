@@ -52,8 +52,18 @@ const StudentDashboard = () => {
   // Checkout State
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [checkoutSessionData, setCheckoutSessionData] = useState(null);
+  const [trustProfile, setTrustProfile] = useState(null);
 
   useEffect(() => {
+    const fetchTrustProfile = async () => {
+      try {
+        const response = await api.get('/auth/profile/trust');
+        setTrustProfile(response.data);
+      } catch (error) {
+        console.error("Failed to fetch trust profile", error);
+      }
+    };
+    fetchTrustProfile();
     fetchTutors();
   }, []);
 
@@ -174,7 +184,8 @@ const StudentDashboard = () => {
       fetchTutorSessions();
       fetchStudentBookings();
     } catch (error) {
-      const msg = error?.response?.data?.message || 'Failed to book session';
+      console.error(error);
+      const msg = error?.response?.data?.message || error?.response?.data?.error || 'Failed to book session';
       toast.warning(msg);
     }
   };
@@ -209,6 +220,22 @@ const StudentDashboard = () => {
             STUEDU – Student
           </Link>
           <div className="flex items-center gap-6">
+            <Link to="/my-sessions" className="px-4 py-1.5 bg-gray-900 border border-gray-700 text-gray-300 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-teal-500/10 hover:text-teal-400 transition hidden md:block">My History</Link>
+            <Link to="/profile" className="px-4 py-1.5 bg-gray-900 border border-gray-700 text-teal-400 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-teal-500/10 transition hidden md:block">Settings</Link>
+            {trustProfile && (
+                <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-teal-500/10 rounded-full border border-gray-700">
+                    <span className={`w-2 h-2 rounded-full ${trustProfile.trustLevel === 'High' ? 'bg-gradient-to-r from-amber-500 to-orange-600' :
+                        trustProfile.trustLevel === 'Medium' ? 'bg-yellow-500' : 'bg-red-500'
+                        }`}></span>
+                    <span className="text-xs font-semibold text-teal-400 uppercase tracking-wider">
+                        {trustProfile.trustLevel} Trust
+                    </span>
+                    <span className="text-blue-200">|</span>
+                    <span className="text-xs text-gray-400">
+                        Limit: {trustProfile.bookingLimit}
+                    </span>
+                </div>
+            )}
             {/* Notifications Bell */}
             <div className="relative">
               <button
@@ -326,6 +353,57 @@ const StudentDashboard = () => {
             </div>
           </div>
         </header>
+
+        {/* Dynamic Access Status Card */}
+        {trustProfile && (
+            <div className="mb-10 grid grid-cols-1 md:grid-cols-12 gap-6 bg-gray-800 p-6 rounded-[2rem] border border-gray-700 shadow-xl shadow-blue-50/50">
+                <div className="md:col-span-4 border-b md:border-b-0 md:border-r border-gray-700 pb-6 md:pb-0 md:pr-6 flex flex-col justify-center">
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Dynamic Access Profile</p>
+                    <h2 className={`text-4xl font-black mb-1 ${trustProfile.trustLevel === 'High' ? 'text-green-500' : trustProfile.trustLevel === 'Medium' ? 'text-teal-400' : 'text-red-500'}`}>
+                        {trustProfile.trustLevel} Trust
+                    </h2>
+                    <p className="text-gray-400 text-sm font-medium">
+                        Level: {trustProfile.trustLevel === 'High' ? 'Elite Contributor' : trustProfile.trustLevel === 'Medium' ? 'Standard Member' : 'Restricted Access'}
+                    </p>
+                </div>
+                <div className="md:col-span-4 border-b md:border-b-0 md:border-r border-gray-700 py-6 md:py-0 md:px-6">
+                    <div className="flex items-center gap-4 h-full">
+                        <div className="w-16 h-16 rounded-2xl bg-teal-500/10 flex items-center justify-center text-3xl shadow-inner">
+                            {trustProfile.trustLevel === 'High' ? '🚀' : trustProfile.trustLevel === 'Medium' ? '📅' : '⚠️'}
+                        </div>
+                        <div>
+                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Booking Capacity</p>
+                            <p className="text-2xl font-bold text-gray-300">{trustProfile.bookingLimit} Slots Max</p>
+                            <div className="mt-1 flex gap-1">
+                                {[...Array(5)].map((_, i) => (
+                                    <div key={i} className={`h-1 w-4 rounded-full ${i < trustProfile.bookingLimit ? 'bg-gradient-to-r from-teal-500 to-indigo-600' : 'bg-gray-800'}`}></div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div className="md:col-span-4 pt-6 md:pt-0 md:pl-6 flex flex-col justify-center">
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Live Risk Insights</p>
+                    <div className="flex flex-wrap gap-2">
+                        {trustProfile.badges && trustProfile.badges.map(badge => (
+                            <span key={badge} className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-100 animate-pulse">
+                                ✨ {badge}
+                            </span>
+                        ))}
+                        {trustProfile.trustLevel === 'Low' && (
+                            <span className="px-3 py-1 bg-red-50 text-red-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-red-100">
+                                Block Risk: High
+                            </span>
+                        )}
+                        {trustProfile.stats && trustProfile.stats.attendanceRate > 90 && (
+                            <span className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-green-100">
+                                Perfect Attendance
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </div>
+        )}
 
         {/* Tutor Scheduled Sessions from DB */}
         <div className="mb-16">
@@ -526,7 +604,7 @@ const StudentDashboard = () => {
                         )}
                         {sessionPhase === 'completed' && booking.status !== 'cancelled' && (
                           <button
-                            onClick={() => navigate('/feedback', { state: { sessionId: booking.session?._id || booking._id, tutorId: booking.tutor?._id, studentId: user._id } })}
+                            onClick={() => navigate('/feedback', { state: { sessionId: booking.session?._id || booking._id, tutorId: booking.tutor?._id || booking.tutor, studentId: user._id } })}
                             className="flex-1 md:flex-none px-4 py-2 rounded-xl border border-blue-500/50 text-blue-400 text-sm font-medium hover:bg-blue-500/10 transition-colors"
                           >
                             Give Feedback
