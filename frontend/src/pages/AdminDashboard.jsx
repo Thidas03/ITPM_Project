@@ -8,6 +8,7 @@ const AdminDashboard = () => {
     const [stats, setStats] = useState(null);
     const [users, setUsers] = useState([]);
     const [sessions, setSessions] = useState([]);
+    const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
 
     // Advanced CRUD State
@@ -23,14 +24,16 @@ const AdminDashboard = () => {
     const fetchAdminData = async () => {
         try {
             setLoading(true);
-            const [statsRes, usersRes, sessionsRes] = await Promise.all([
+            const [statsRes, usersRes, sessionsRes, txRes] = await Promise.all([
                 api.get('/admin/stats'),
                 api.get('/admin/users'),
-                api.get('/admin/sessions')
+                api.get('/admin/sessions'),
+                api.get('/admin/transactions')
             ]);
             setStats(statsRes.data.stats);
             setUsers(usersRes.data.users);
             setSessions(sessionsRes.data.sessions);
+            setTransactions(txRes.data.transactions);
         } catch (error) {
             toast.error('Failed to fetch admin data');
         } finally {
@@ -130,7 +133,7 @@ const AdminDashboard = () => {
                         { id: 'sessions', label: 'Sessions', icon: '📅' },
                         { id: 'history_link', label: 'My History', icon: '📜', path: '/admin/history' },
                         { id: 'payments', label: 'Financials', icon: '💳' },
-                        { id: 'ratings', label: 'Feedback', icon: '⭐' },
+                        { id: 'ratings', label: 'Feedback', icon: '⭐', path: '/admin-feedback' },
                     ].map(item => (
                         item.path ? (
                             <Link
@@ -382,12 +385,93 @@ const AdminDashboard = () => {
                     </div>
                 )}
 
-                {/* Financials / Ratings Placeholder */}
-                {(activeTab === 'payments' || activeTab === 'ratings') && (
-                    <div className="flex flex-col items-center justify-center py-20 bg-gray-800 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/20 border-dashed">
-                        <div className="text-6xl mb-4">🚀</div>
-                        <h3 className="text-xl font-black text-gray-300">Feature Under Optimization</h3>
-                        <p className="text-slate-400 font-medium">This module is currently processing live data. Access will be unlocked in v2.4.</p>
+                {/* Financials / Payments Tab */}
+                {activeTab === 'payments' && (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <div className="flex justify-between items-center bg-gray-800 p-6 rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden relative">
+                            <div className="absolute top-0 right-0 p-6 opacity-10 text-6xl">💳</div>
+                            <div>
+                                <h3 className="text-xl font-black text-gray-300">Financial Ledger</h3>
+                                <p className="text-slate-400 font-medium text-sm italic">Comprehensive record of all student payments and platform revenue</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total Processing Volume</p>
+                                <p className="text-3xl font-black text-teal-500">${transactions.reduce((sum, tx) => (sum + (tx.amount || 0)), 0).toLocaleString()}</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-gray-800 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/20 overflow-hidden">
+                            <table className="w-full text-left">
+                                <thead className="bg-gray-900 border-b border-slate-100">
+                                    <tr>
+                                        <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Transaction Info</th>
+                                        <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Student Subject</th>
+                                        <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Amount Split</th>
+                                        <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Trust Status</th>
+                                        <th className="px-8 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Date & Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {transactions.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="5" className="px-8 py-20 text-center text-slate-400 font-medium italic">No transactions found in system records.</td>
+                                        </tr>
+                                    ) : (
+                                        transactions.map(tx => (
+                                            <tr key={tx._id} className="hover:bg-gray-900/50 transition border-b border-gray-700/50">
+                                                <td className="px-8 py-5">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-black text-teal-400 font-mono truncate max-w-[120px]">REF-{(tx.stripeSessionId || tx._id).slice(-8).toUpperCase()}</span>
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter mt-1">{tx.sessionId || 'Bespoke Session'}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-5">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-9 h-9 rounded-xl bg-gray-900 flex items-center justify-center font-bold text-slate-400 ring-1 ring-slate-800">
+                                                            {tx.userId?.firstName ? tx.userId.firstName[0] : 'U'}
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-bold text-gray-300 text-sm leading-none mb-1">{tx.userId?.firstName || 'System'} {tx.userId?.lastName || 'User'}</p>
+                                                            <p className="text-[10px] text-slate-500 font-black tracking-tighter uppercase">{tx.userId?.identityNumber || tx.userId?.email || 'N/A'}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-5">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-black text-gray-300 leading-none mb-1">Total: ${tx.amount}</span>
+                                                        <div className="flex gap-2 text-[9px] font-bold text-slate-500 uppercase">
+                                                            <span>Fee: <span className="text-teal-500">${tx.platformFee}</span></span>
+                                                            <span>Earn: <span className="text-indigo-400">${tx.tutorEarnings}</span></span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-5">
+                                                    <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${tx.status === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : tx.status === 'failed' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-gray-900 text-gray-400'}`}>
+                                                        {tx.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-8 py-5 text-right">
+                                                    <div className="flex flex-col items-end">
+                                                        <p className="text-xs font-bold text-gray-300">{new Date(tx.createdAt).toLocaleDateString()}</p>
+                                                        <p className="text-[10px] font-bold text-slate-500 uppercase">{new Date(tx.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* Ratings Placeholder */}
+                {activeTab === 'ratings' && (
+                    <div className="flex flex-col items-center justify-center py-20 bg-gray-800 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/20 border-dashed animate-in zoom-in-95 duration-500">
+                        <div className="text-6xl mb-4 opacity-50">⭐</div>
+                        <h3 className="text-xl font-black text-gray-300 uppercase tracking-tighter">Redirecting Header</h3>
+                        <p className="text-slate-400 font-medium text-sm">Please utilize the specialized Feedback Dashboard in the sidebar for full control.</p>
+                        <Link to="/admin-feedback" className="mt-6 px-8 py-3 bg-gradient-to-r from-teal-500 to-indigo-600 text-white rounded-2xl font-bold hover:shadow-2xl transition">Advance to Feedback Dashboard →</Link>
                     </div>
                 )}
             </main>

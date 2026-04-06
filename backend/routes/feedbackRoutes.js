@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const { protect, admin } = require("../middleware/authMiddleware");
 
 const {
   createFeedback,
@@ -9,19 +10,19 @@ const {
   deleteFeedback,
 } = require("../controllers/feedbackController");
 
-// Submit feedback
+// Submit feedback (User role usually, or everyone)
 router.post("/", createFeedback);
 
-// Admin view
-router.get("/", getAllFeedback);
+// Admin view (Protected)
+router.get("/", protect, admin, getAllFeedback);
 
-// Tutor view
-router.get("/tutor/:tutorId", getTutorFeedback);
+// Tutor view (Protected for specific tutor or admin)
+router.get("/tutor/:tutorId", protect, getTutorFeedback);
 
-// Update feedback status
-router.put("/:id", updateFeedbackStatus);
+// Update feedback status (Admin only)
+router.put("/:id", protect, admin, updateFeedbackStatus);
 
-// Delete feedback
-router.delete("/:id", deleteFeedback);
+// Delete feedback (Admin only)
+router.delete("/:id", protect, admin, deleteFeedback);
 
 module.exports = router;

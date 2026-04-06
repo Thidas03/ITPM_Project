@@ -9,7 +9,8 @@ const {
     deleteUser,
     createUser,
     updateUser,
-    getAdminHistory
+    getAdminHistory,
+    getAllTransactions
 } = require('../controllers/adminController');
 
 router.use(protect);
@@ -17,6 +18,7 @@ router.use(admin);
 
 router.get('/stats', getDashboardStats);
 router.get('/history', getAdminHistory);
+router.get('/transactions', getAllTransactions);
 router.get('/users', getAllUsers);
 router.post('/users', createUser);
 router.put('/users/:id', updateUser);

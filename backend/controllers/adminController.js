@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Session = require('../models/Session');
 const Booking = require('../models/Booking');
 const AuditLog = require('../models/AuditLog');
+const Transaction = require('../models/Transaction');
 
 // @desc    Get admin's personal action history
 // @route   GET /api/admin/history
@@ -266,6 +267,20 @@ exports.updateUser = async (req, res) => {
             message: 'User updated successfully',
             user: updatedUser
         });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Get all transactions (Financial History)
+// @route   GET /api/admin/transactions
+// @access  Private/Admin
+exports.getAllTransactions = async (req, res) => {
+    try {
+        const transactions = await Transaction.find()
+            .populate('userId', 'firstName lastName email identityNumber')
+            .sort('-createdAt');
+        res.json({ success: true, transactions });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
