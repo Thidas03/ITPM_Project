@@ -4,7 +4,8 @@ import 'react-calendar/dist/Calendar.css';
 import { getTutorSessions, createSession, updateSession, deleteSession, getSessionParticipants, cancelSession } from '../services/sessionService';
 import { toast } from 'react-toastify';
 import AvailabilityManager from './AvailabilityManager';
-import { FaUsers, FaLink, FaCalendarAlt, FaClock, FaCheckCircle, FaExclamationCircle, FaHistory } from 'react-icons/fa';
+import { FaUsers, FaLink, FaCalendarAlt, FaClock, FaCheckCircle, FaExclamationCircle, FaHistory, FaGem } from 'react-icons/fa';
+import api from '../../../services/api';
 import ConfirmationModal from '../../common/components/ConfirmationModal';
 
 const parseSessionTime = (dateStr, timeStr) => {
@@ -23,7 +24,7 @@ const parseSessionTime = (dateStr, timeStr) => {
   return d;
 };
 
-const TutorScheduleManager = ({ tutorId }) => {
+const TutorScheduleManager = ({ tutorId, onManageQuiz }) => {
     const [activeTab, setActiveTab] = useState('sessions');
 
     // Sessions state
@@ -47,6 +48,11 @@ const TutorScheduleManager = ({ tutorId }) => {
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const [cancelingSession, setCancelingSession] = useState(false);
 
+    // Slot management state
+    const [tutorData, setTutorData] = useState(null);
+    const [loadingSlots, setLoadingSlots] = useState(false);
+    const [buyingSlot, setBuyingSlot] = useState(false);
+
     const isPastDate = (selectedDate) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -57,10 +63,37 @@ const TutorScheduleManager = ({ tutorId }) => {
 
     useEffect(() => {
         fetchSessions();
+        fetchTutorData();
         const interval = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(interval);
         // eslint-disable-next-line
     }, [tutorId]);
+
+    const fetchTutorData = async () => {
+        try {
+            const { data } = await api.get(`/auth/user/${tutorId}`);
+            setTutorData(data.user);
+        } catch (error) {
+            console.error('Error fetching tutor slots:', error);
+        }
+    };
+
+    const handleBuySlot = async () => {
+        if (!window.confirm('Do you want to buy an extra session slot for Rs. 100?')) return;
+        
+        try {
+            setBuyingSlot(true);
+            const { data } = await api.post('/payments/buy-slot', { userId: tutorId });
+            if (data.success) {
+                toast.success('Extra slot purchased! You can now create more sessions.');
+                fetchTutorData();
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to purchase slot');
+        } finally {
+            setBuyingSlot(false);
+        }
+    };
 
     const fetchSessions = async () => {
         try {
@@ -127,7 +160,7 @@ const TutorScheduleManager = ({ tutorId }) => {
                 toast.success('Session updated successfully!');
                 setEditingSessionId(null);
             } else {
-                await createSession({
+                const result = await createSession({
                     tutor: tutorId,
                     date: date.toISOString(),
                     startTime,
@@ -136,12 +169,18 @@ const TutorScheduleManager = ({ tutorId }) => {
                     price,
                     meetingLink
                 });
-                toast.success('Session created successfully!');
+                setSessions([...sessions, result.data]);
+                toast.success('Session slot created successfully');
+                fetchTutorData(); // Update slot count
             }
             setMeetingLink('');
             fetchSessions();
         } catch (error) {
-            toast.error(error?.response?.data?.message || error?.response?.data?.error || `Failed to ${editingSessionId ? 'update' : 'create'} session`);
+            if (error.response?.status === 403 && error.response?.data?.limitReached) {
+                toast.error(error.response.data.message);
+            } else {
+                toast.error(error.response?.data?.message || 'Failed to create session slot');
+            }
         }
     };
 
@@ -209,8 +248,41 @@ const TutorScheduleManager = ({ tutorId }) => {
     );
 
     return (
-        <div className="text-gray-300 w-full font-sans">
-            <div className="max-w-6xl mx-auto space-y-8">
+        <div className="p-4 md:p-6 bg-gray-900 min-h-screen text-white">
+            {/* Slot Quota Header */}
+            {tutorData && (
+                <div className="mb-6 p-4 bg-indigo-600/20 border border-indigo-500/30 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-indigo-500 rounded-xl">
+                            <FaGem className="text-white text-xl" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-lg">Weekly Session Quota</h3>
+                            <p className="text-indigo-200 text-sm">
+                                You have 5 free slots + {tutorData.extraSlots || 0} purchased slots this week.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-6">
+                        <div className="text-right">
+                            <p className="text-xs text-indigo-300 uppercase font-black tracking-widest">Next Reset</p>
+                            <p className="font-mono text-white">
+                                {new Date(tutorData.slotResetDate).toLocaleDateString()}
+                            </p>
+                        </div>
+                        <button 
+                            onClick={handleBuySlot}
+                            disabled={buyingSlot}
+                            className="px-6 py-2 bg-white text-indigo-600 rounded-xl font-bold hover:bg-indigo-50 transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/20 disabled:opacity-50"
+                        >
+                            {buyingSlot ? 'Processing...' : '+ Buy Extra Slot (Rs. 100)'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            <div className="flex flex-wrap gap-4 mb-8">
                 <header className="mb-8">
                     <h1 className="text-4xl font-extrabold text-gray-300">
                         Work Schedule
@@ -350,6 +422,12 @@ const TutorScheduleManager = ({ tutorId }) => {
                                                         <FaExclamationCircle /> Cancel Session
                                                     </button>
                                                 )}
+                                                <button
+                                                    onClick={() => onManageQuiz(session._id)}
+                                                    className="px-4 py-2 bg-gradient-to-r from-teal-500 to-indigo-600 text-white text-sm font-bold rounded-lg transition-all text-center flex items-center justify-center gap-2 shadow-lg shadow-teal-500/10 hover:shadow-teal-500/30"
+                                                >
+                                                    📝 Manage Quiz
+                                                </button>
                                             </div>
                                         </div>
                                     );
@@ -565,6 +643,12 @@ const TutorScheduleManager = ({ tutorId }) => {
                                                             className="flex-1 sm:flex-none hover:bg-amber-500/20 text-amber-500 hover:text-amber-400 px-4 py-2 rounded-lg border border-amber-900/50 transition-colors text-sm font-medium"
                                                         >
                                                             Edit
+                                                        </button>
+                                                        <button
+                                                            onClick={() => onManageQuiz(session._id)}
+                                                            className="flex-1 sm:flex-none bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 px-4 py-2 rounded-lg border border-teal-500/30 transition-colors text-sm font-medium"
+                                                        >
+                                                            Quiz
                                                         </button>
                                                         <button
                                                             onClick={() => handleDeleteSession(session._id)}

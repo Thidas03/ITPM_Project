@@ -6,9 +6,9 @@ const transactionSchema = new mongoose.Schema({
         ref: 'User', 
         required: [true, 'Transaction must belong to a user'] 
     },
-    sessionId: { type: String }, // For single sessions
-    bundleId: { type: String },  // For bundles
-    stripeSessionId: { type: String, required: [true, 'Stripe Session ID is required'] },
+    sessionId: { type: String, required: [true, 'Session ID is required'] },
+    stripeSessionId: { type: String }, // Optional if paying via wallet
+    paymentMethod: { type: String, enum: ['stripe', 'wallet', 'card'], default: 'stripe' },
     amount: { 
         type: Number, 
         required: [true, 'Amount is required'],
@@ -16,9 +16,12 @@ const transactionSchema = new mongoose.Schema({
     }, // Total amount paid in dollars/currency
     platformFee: { 
         type: Number, 
-        required: [true, 'Platform fee is required'],
-        min: [0, 'Fee cannot be negative']
-    }, // e.g., 20%
+        default: 0
+    },
+    platformCommission: {
+        type: Number,
+        default: 0
+    },
     tutorEarnings: { 
         type: Number, 
         required: [true, 'Tutor earnings are required'],
@@ -27,9 +30,10 @@ const transactionSchema = new mongoose.Schema({
     tutorId: { type: String, required: [true, 'Tutor ID is required for commission tracking'] }, // ID of the tutor
     status: { 
         type: String, 
-        enum: ['pending', 'completed', 'failed', 'refunded'],
-        default: 'completed' 
+        enum: ['pending', 'held_in_escrow', 'released', 'disputed', 'refunded', 'failed'],
+        default: 'pending' 
     },
+    releaseDate: { type: Date }, // When money is released to tutor
     invoiceUrl: { type: String }, // Link to Stripe PDF invoice
     createdAt: { type: Date, default: Date.now }
 });

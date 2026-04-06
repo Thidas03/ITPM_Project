@@ -2,10 +2,11 @@ const express = require('express');
 const { check, validationResult } = require('express-validator');
 const router = express.Router();
 const stripe = require('stripe')(process.argv[2] || process.env.STRIPE_SECRET_KEY);
-const User = require('../models/User');
+const User = require('../../models/User');
 const Transaction = require('../models/Transaction');
-const Availability = require('../models/Availability');
-const { sendSessionConfirmation } = require('../services/emailService');
+const Availability = require('../../models/Availability');
+const Discount = require('../models/Discount');
+const { sendSessionConfirmation } = require('../../services/emailService');
 
 // MOCK: In a real app, these would come from a Session/Class model in the database
 const SESSION_DATA = {
@@ -42,7 +43,7 @@ const validate = (req, res, next) => {
     next();
 };
 
-// Create a Checkout Session for a single session/class or bundle
+// Create a Checkout Session for a single session/class (Held in Escrow)
 router.post(
     '/create-checkout-session',
     [
@@ -59,7 +60,6 @@ router.post(
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: 'User not found' });
 
-        // 1. Check Tutor Availability (Capacity)
         const availability = await Availability.findById(availabilityId);
         if (!availability) return res.status(404).json({ message: 'Availability slot not found' });
 
@@ -67,40 +67,42 @@ router.post(
             return res.status(400).json({ message: 'This session is already full' });
         }
 
-        // 2. Check Student Availability (Overlap Check)
-        // Find all sessions this student is already enrolled in
-        const existingSessions = await Availability.find({
-            enrolledStudents: userId,
-            dayOfWeek: availability.dayOfWeek
-        });
+        const tutorId = availability.tutor || req.body.tutorId; // Compatibility check
+        const discount = await Discount.findOne({ student: userId, tutor: tutorId, isUsed: false });
+        let amount = req.body.amount || 1000; // Fallback for testing
+        let finalAmount = amount;
+        let discountId = null;
 
-        const hasOverlap = existingSessions.some(existing => {
-            // Simple overlap check (HH:mm string comparison)
-            return (availability.startTime < existing.endTime && availability.endTime > existing.startTime);
-        });
-
-        if (hasOverlap) {
-            return res.status(400).json({ message: 'You are already booked for another session at this time' });
+        if (discount) {
+            finalAmount = amount * (1 - discount.percentage);
+            discountId = discount._id;
         }
 
         const session = await stripe.checkout.sessions.create({
             mode: 'payment',
             customer: user.stripeCustomerId || undefined,
             payment_method_types: ['card'],
-            allow_promotion_codes: true, // Key Feature 1: Coupons
-            invoice_creation: { enabled: true }, // Key Feature 3: Invoices
-            line_items: [
-                {
-                    price: priceId,
-                    quantity: 1,
+            allow_promotion_codes: true,
+            invoice_creation: { enabled: true },
+            line_items: [{ 
+                price_data: {
+                    currency: 'lkr',
+                    product_data: {
+                        name: `Session Booking: ${availability.startTime} - ${availability.endTime}`,
+                        description: `Tutor Session with Discount Applied: ${discount ? (discount.percentage * 100) + '%' : 'None'}`
+                    },
+                    unit_amount: Math.round(finalAmount * 100)
                 },
-            ],
+                quantity: 1 
+            }],
             success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${process.env.FRONTEND_URL}/cancel`,
             metadata: {
+                type: 'session_payment',
                 userId: userId,
                 sessionId: sessionId,
-                availabilityId: availabilityId
+                availabilityId: availabilityId,
+                discountId: discountId ? discountId.toString() : null
             },
         });
 
@@ -110,6 +112,52 @@ router.post(
         res.status(500).json({ error: error.message });
     }
 });
+
+// Create a Checkout Session for Wallet Recharge
+router.post(
+    '/create-recharge-session',
+    [
+        check('userId', 'User ID is required').not().isEmpty(),
+        check('amount', 'Amount is required').isNumeric(),
+        validate
+    ],
+    async (req, res) => {
+        const { userId, amount } = req.body;
+
+        try {
+            const user = await User.findById(userId);
+            if (!user) return res.status(404).json({ message: 'User not found' });
+
+            const session = await stripe.checkout.sessions.create({
+                mode: 'payment',
+                customer: user.stripeCustomerId || undefined,
+                payment_method_types: ['card'],
+                line_items: [{
+                    price_data: {
+                        currency: 'lkr',
+                        product_data: {
+                            name: 'StuEdu Wallet Recharge',
+                            description: `Adding Rs. ${amount} to your virtual wallet`,
+                        },
+                        unit_amount: amount * 100,
+                    },
+                    quantity: 1,
+                }],
+                success_url: `${process.env.FRONTEND_URL}/dashboard?recharge=success`,
+                cancel_url: `${process.env.FRONTEND_URL}/dashboard?recharge=cancel`,
+                metadata: {
+                    type: 'wallet_recharge',
+                    userId: userId,
+                    amount: amount
+                },
+            });
+
+            res.json({ url: session.url });
+        } catch (error) {
+            res.status(500).json({ error: error.message });
+        }
+    }
+);
 
 // Stripe Webhook Endpoint
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -131,15 +179,11 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     switch (event.type) {
         case 'checkout.session.completed':
             const session = event.data.object;
-            if (session.mode === 'payment') {
+            if (session.metadata.type === 'session_payment') {
                 await handleSessionPaymentSuccess(session);
-            } else if (session.mode === 'subscription') {
-                await handleSubscriptionSuccess(session);
+            } else if (session.metadata.type === 'wallet_recharge') {
+                await handleWalletRechargeSuccess(session);
             }
-            break;
-        case 'customer.subscription.deleted':
-            const subscription = event.data.object;
-            await handleSubscriptionDeleted(subscription);
             break;
         default:
             console.log(`Unhandled event type ${event.type}`);
@@ -155,46 +199,41 @@ async function handleSessionPaymentSuccess(session) {
 
     try {
         const user = await User.findById(userId);
-        if (!user) {
-            console.error(`User ${userId} not found for email confirmation.`);
-            return;
-        }
+        if (!user) return;
 
         const availabilityId = session.metadata.availabilityId;
-
-        // Update User's paid sessions
-        await User.findByIdAndUpdate(userId, {
-            stripeCustomerId: stripeCustomerId,
-            $addToSet: { paidSessions: sessionId }
-        });
 
         // Register student in the Availability slot
         await Availability.findByIdAndUpdate(availabilityId, {
             $addToSet: { enrolledStudents: userId }
         });
 
-        // Send Email Notification
         const sessionInfo = SESSION_DATA[sessionId] || {
-            courseName: 'Your Enrolled Class',
-            tutorName: 'Our Expert Tutor',
-            tutorId: 'unknown',
-            password: 'See dashboard for details',
+            courseName: 'Peer Tutoring Session',
+            tutorName: 'Platform Tutor',
+            tutorId: 'tutor_generic',
         };
 
         const amountTotal = session.amount_total / 100;
-        const platformFee = amountTotal * 0.2; // 20% commission
-        const tutorEarnings = amountTotal * 0.8; // 80% to tutor
+        const platformCommission = amountTotal * 0.1; // 10% Platform Commission
+        const tutorEarnings = amountTotal * 0.9; // 90% Tutor Earnings
 
-        // Key Feature 5: Tutor Commission Tracking & Key Feature 2 & 3: Transaction logging & Invoices
+        // Mark discount as used if applicable
+        if (session.metadata.discountId) {
+            await Discount.findByIdAndUpdate(session.metadata.discountId, { isUsed: true });
+        }
+
+        // Save Transaction as HELD_IN_ESCROW
         const transaction = new Transaction({
             userId: userId,
             sessionId: sessionId,
             stripeSessionId: session.id,
+            paymentMethod: 'stripe',
             amount: amountTotal,
-            platformFee: platformFee,
+            platformCommission,
             tutorEarnings: tutorEarnings,
             tutorId: sessionInfo.tutorId,
-            status: 'completed'
+            status: 'held_in_escrow'
         });
 
         await transaction.save();
@@ -204,40 +243,24 @@ async function handleSessionPaymentSuccess(session) {
             price: amountTotal.toFixed(2),
         });
 
-        console.log(`Payment success, transaction logged, and email sent for session ${sessionId} for user ${userId}`);
+        console.log(`Escrow Transaction created for user ${userId}`);
     } catch (error) {
-        console.error(`Error handling session success for ${userId}:`, error);
+        console.error(`Error handling session payment:`, error);
     }
 }
 
-async function handleSubscriptionSuccess(session) {
+async function handleWalletRechargeSuccess(session) {
     const userId = session.metadata.userId;
-    const stripeCustomerId = session.customer;
-    const subscriptionId = session.subscription;
+    const amount = parseFloat(session.metadata.amount);
 
     try {
         await User.findByIdAndUpdate(userId, {
-            stripeCustomerId: stripeCustomerId,
-            subscriptionStatus: 'active',
-            subscriptionTier: 'premium',
+            $inc: { walletBalance: amount },
+            stripeCustomerId: session.customer
         });
-        console.log(`Subscription success for user ${userId}`);
+        console.log(`Wallet recharged with Rs ${amount} for user ${userId}`);
     } catch (error) {
-        console.error(`Error updating user status for ${userId}:`, error);
-    }
-}
-
-async function handleSubscriptionDeleted(subscription) {
-    try {
-        const user = await User.findOne({ stripeCustomerId: subscription.customer });
-        if (user) {
-            user.subscriptionStatus = 'none';
-            user.subscriptionTier = 'free';
-            await user.save();
-            console.log(`Subscription deleted for customer ${subscription.customer}`);
-        }
-    } catch (error) {
-        console.error(`Error handling subscription deletion:`, error);
+        console.error(`Error recharging wallet:`, error);
     }
 }
 

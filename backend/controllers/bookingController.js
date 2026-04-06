@@ -3,7 +3,7 @@ const Session = require('../models/Session');
 const Availability = require('../models/Availability');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
-const Transaction = require('../models/Transaction');
+const Transaction = require('../Mageepan/models/Transaction');
 
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 

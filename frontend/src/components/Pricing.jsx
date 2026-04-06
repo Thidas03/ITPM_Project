@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Check, X } from 'lucide-react';
-import CheckoutModal from './CheckoutModal';
+import { Check, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import CheckoutModal from '../Mageepan/Checkout/CheckoutModal';
+import { useAuth } from '../context/AuthContext';
 
 const Pricing = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);

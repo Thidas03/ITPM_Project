@@ -79,15 +79,20 @@ const userSchema = new mongoose.Schema({
         type: [String],
         default: []
     },
-    subscriptionStatus: {
-        type: String,
-        enum: ['none', 'active', 'canceled'],
-        default: 'none'
+    walletBalance: {
+        type: Number,
+        default: 0,
+        min: 0
     },
-    subscriptionTier: {
-        type: String,
-        enum: ['free', 'premium'],
-        default: 'free'
+    pendingBalance: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    commissionEarned: {
+        type: Number,
+        default: 0,
+        min: 0
     },
     isActive: {
         type: Boolean,
@@ -140,6 +145,20 @@ const userSchema = new mongoose.Schema({
     otpExpires: {
         type: Date,
         default: null
+    },
+    extraSlots: {
+        type: Number,
+        default: 0
+    },
+    slotResetDate: {
+        type: Date,
+        default: () => {
+            const now = new Date();
+            const nextMonday = new Date(now);
+            nextMonday.setDate(now.getDate() + (1 + 7 - now.getDay()) % 7);
+            nextMonday.setHours(0, 0, 0, 0);
+            return nextMonday;
+        }
     }
 }, {
     timestamps: true

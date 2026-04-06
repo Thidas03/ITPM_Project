@@ -2,7 +2,7 @@ const User = require('../models/User');
 const Session = require('../models/Session');
 const Booking = require('../models/Booking');
 const AuditLog = require('../models/AuditLog');
-const Transaction = require('../models/Transaction');
+const Transaction = require('../Mageepan/models/Transaction');
 
 // @desc    Get admin's personal action history
 // @route   GET /api/admin/history

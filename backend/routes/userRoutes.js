@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Transaction = require('../models/Transaction');
+const Transaction = require('../Mageepan/models/Transaction');
 const User = require('../models/User');
 
 // Get all tutors/hosts

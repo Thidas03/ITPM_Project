@@ -3,6 +3,8 @@ import { getStudentBookings, cancelBooking, completeBooking, rateBooking } from 
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
+import api from '../services/api';
+import QuizTakeModal from '../Mageepan/Quizzes/components/QuizTakeModal';
 
 const MySessions = () => {
     const { user } = useAuth();
@@ -10,6 +12,7 @@ const MySessions = () => {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('upcoming');
     const [ratingModal, setRatingModal] = useState({ isOpen: false, bookingId: null, rating: 5, review: '' });
+    const [quizModal, setQuizModal] = useState({ isOpen: false, sessionId: null, tutorName: '' });
 
     useEffect(() => {
         fetchBookings();
@@ -58,6 +61,34 @@ const MySessions = () => {
             fetchBookings();
         } catch (error) {
             toast.error('Failed to submit rating');
+        }
+    };
+
+    const handleReleaseEscrow = async (sessionId) => {
+        try {
+            // We need to find the transaction for this session first
+            const { data: txData } = await api.get(`/payments/session-transaction/${sessionId}`);
+            if (!txData.transaction) return toast.error('No payment found for this session');
+
+            await api.patch(`/payments/release/${txData.transaction._id}`);
+            toast.success('Funds released to tutor. Thank you!');
+            fetchBookings();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Release failed');
+        }
+    };
+
+    const handleDispute = async (sessionId) => {
+        if (!window.confirm('Are you sure you want to dispute this session? The tutor will not be paid until an admin reviews it.')) return;
+        try {
+            const { data: txData } = await api.get(`/payments/session-transaction/${sessionId}`);
+            if (!txData.transaction) return toast.error('No payment found');
+
+            await api.patch(`/payments/dispute/${txData.transaction._id}`);
+            toast.success('Session disputed. Admin notified.');
+            fetchBookings();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Dispute failed');
         }
     };
 
@@ -190,12 +221,32 @@ const MySessions = () => {
                                         </>
                                     )}
                                     {activeTab === 'attended' && (
-                                        <button
-                                            onClick={() => setRatingModal({ ...ratingModal, isOpen: true, bookingId: booking._id })}
-                                            className="px-6 py-3 bg-indigo-500 text-white rounded-xl font-bold text-sm hover:bg-indigo-400 transition"
-                                        >
-                                            {booking.rating ? `Update Rating (${booking.rating}⭐)` : 'Rate Now ⭐'}
-                                        </button>
+                                        <div className="flex flex-col gap-2">
+                                            <button
+                                                onClick={() => setRatingModal({ ...ratingModal, isOpen: true, bookingId: booking._id })}
+                                                className="px-6 py-2 bg-indigo-500 text-white rounded-xl font-bold text-sm hover:bg-indigo-400 transition"
+                                            >
+                                                {booking.rating ? `Update Rating (${booking.rating}⭐)` : 'Rate Now ⭐'}
+                                            </button>
+                                            <button
+                                                onClick={() => setQuizModal({ isOpen: true, sessionId: booking.session._id, tutorName: `${booking.session.tutor.firstName} ${booking.session.tutor.lastName}` })}
+                                                className="px-6 py-2 bg-gradient-to-r from-teal-500 to-indigo-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:scale-105 transition shadow-lg shadow-teal-500/20"
+                                            >
+                                                🧠 Take Quiz & Earn Discount
+                                            </button>
+                                            <button
+                                                onClick={() => handleReleaseEscrow(booking.session._id)}
+                                                className="px-6 py-2 bg-green-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-green-500 transition shadow-lg shadow-green-500/20"
+                                            >
+                                                Confirm & Release Funds
+                                            </button>
+                                            <button
+                                                onClick={() => handleDispute(booking.session._id)}
+                                                className="px-6 py-2 bg-red-900/30 text-red-400 border border-red-900/50 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-red-900/50 transition"
+                                            >
+                                                Report Issue / Dispute
+                                            </button>
+                                        </div>
                                     )}
                                     {activeTab === 'missed' && (
                                         <span className="px-4 py-2 bg-red-500/10 text-red-500 border border-red-500/30 rounded-xl text-xs font-black uppercase tracking-widest">
@@ -252,6 +303,15 @@ const MySessions = () => {
                     </div>
                 </div>
             )}
+            {/* Quiz Modal */}
+            <QuizTakeModal 
+                isOpen={quizModal.isOpen}
+                onClose={() => setQuizModal({ ...quizModal, isOpen: false })}
+                sessionId={quizModal.sessionId}
+                studentId={user._id}
+                tutorName={quizModal.tutorName}
+                onSuccess={() => fetchBookings()}
+            />
         </div>
     );
 };

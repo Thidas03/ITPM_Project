@@ -4,7 +4,7 @@ import SessionCard from '../features/sessions/components/SessionCard';
 import SessionDetailsModal from '../features/sessions/components/SessionDetailsModal';
 import ConfirmationModal from '../features/common/components/ConfirmationModal';
 import BookingModal from '../features/bookings/components/BookingModal';
-import CheckoutModal from '../components/CheckoutModal';
+import CheckoutModal from '../Mageepan/Checkout/CheckoutModal';
 import { getTutorAvailability } from '../features/sessions/services/availabilityService';
 import { getTutorSessions } from '../features/sessions/services/sessionService';
 import { getStudentBookings, cancelBooking, createSessionBooking } from '../features/bookings/services/bookingService';
@@ -53,6 +53,7 @@ const StudentDashboard = () => {
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [checkoutSessionData, setCheckoutSessionData] = useState(null);
   const [trustProfile, setTrustProfile] = useState(null);
+  const [walletBalance, setWalletBalance] = useState(0);
 
   useEffect(() => {
     const fetchTrustProfile = async () => {
@@ -65,7 +66,34 @@ const StudentDashboard = () => {
     };
     fetchTrustProfile();
     fetchTutors();
+    fetchWalletBalance();
   }, []);
+
+  const fetchWalletBalance = async () => {
+    try {
+      const { data } = await api.get(`/payments/balance/${user._id}`);
+      setWalletBalance(data.balance);
+    } catch (error) {
+      console.error('Failed to fetch wallet balance', error);
+    }
+  };
+
+  const handleRechargeWallet = async () => {
+    const amount = window.prompt('Enter amount to recharge (LKR):', '1000');
+    if (!amount || isNaN(amount)) return;
+
+    try {
+      const { data } = await api.post('/stripe/create-recharge-session', {
+        userId: user._id,
+        amount: parseFloat(amount)
+      });
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      toast.error('Failed to initiate recharge');
+    }
+  };
 
   const fetchTutors = async () => {
     try {
@@ -404,6 +432,34 @@ const StudentDashboard = () => {
                 </div>
             </div>
         )}
+
+        {/* Wallet & Credits Card */}
+        <div className="mb-10 bg-gradient-to-br from-indigo-900/40 to-teal-900/40 p-6 rounded-[2rem] border border-gray-700 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 backdrop-blur-md">
+            <div className="flex items-center gap-6">
+                <div className="w-16 h-16 rounded-full bg-teal-500/20 flex items-center justify-center text-3xl text-teal-400 border border-teal-500/30">
+                    💰
+                </div>
+                <div>
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">StuEdu Wallet Credits</p>
+                    <h3 className="text-4xl font-black text-white">Rs {walletBalance.toFixed(2)}</h3>
+                </div>
+            </div>
+            <div className="flex gap-3 w-full md:w-auto">
+                <button 
+                  onClick={handleRechargeWallet}
+                  className="flex-1 md:flex-none px-8 py-3 bg-teal-500 text-white rounded-xl font-bold text-sm hover:bg-teal-400 transition shadow-lg shadow-teal-500/20 uppercase tracking-widest"
+                >
+                  Recharge Now
+                </button>
+                <Link 
+                  to="/my-sessions" 
+                  className="flex-1 md:flex-none px-8 py-3 bg-gray-800 text-gray-300 border border-gray-700 rounded-xl font-bold text-sm hover:bg-gray-700 transition uppercase tracking-widest text-center"
+                >
+                  History
+                </Link>
+            </div>
+        </div>
+
 
         {/* Tutor Scheduled Sessions from DB */}
         <div className="mb-16">

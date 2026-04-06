@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import TutorScheduleManager from '../features/sessions/components/TutorScheduleManager';
+import QuizCreatorModal from '../Mageepan/Quizzes/components/QuizCreatorModal';
+
 import { getNotifications, markAllAsRead } from '../features/notifications/services/notificationService';
 import { useAuth } from '../context/AuthContext';
 import { getFeedbackByTutor } from '../services/feedbackService';
@@ -15,8 +17,12 @@ const TutorDashboard = () => {
   const [feedbacks, setFeedbacks] = useState([]);
   const [loadingFeedbacks, setLoadingFeedbacks] = useState(true);
   const [trustProfile, setTrustProfile] = useState(null);
+  const [wallet, setWallet] = useState({ balance: 0, pending: 0 });
+  const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
+  const [selectedSessionId, setSelectedSessionId] = useState(null);
 
   useEffect(() => {
+    fetchWallet();
     const fetchTrustProfile = async () => {
       try {
         const response = await api.get('/auth/profile/trust');
@@ -28,9 +34,22 @@ const TutorDashboard = () => {
     fetchTrustProfile();
     fetchNotifications();
     fetchFeedbacks();
-    const interval = setInterval(fetchNotifications, 5000); // Poll every 5 seconds
+    const interval = setInterval(() => {
+      fetchNotifications();
+      fetchWallet();
+    }, 5000); 
     return () => clearInterval(interval);
   }, []);
+
+  const fetchWallet = async () => {
+    try {
+      const { data } = await api.get(`/payments/balance/${user._id}`);
+      setWallet(data);
+    } catch (error) {
+      console.error('Failed to fetch wallet info', error);
+    }
+  };
+
 
   const fetchFeedbacks = async () => {
     try {
@@ -230,10 +249,52 @@ const TutorDashboard = () => {
             </div>
         )}
 
+        {/* Financial Overview Card */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-8 rounded-[2rem] border border-gray-700 shadow-2xl relative overflow-hidden group">
+                <div className="absolute -right-8 -bottom-8 w-40 h-40 bg-teal-500/5 rounded-full blur-3xl group-hover:bg-teal-500/10 transition-all duration-700"></div>
+                <div className="flex justify-between items-start mb-4">
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Available Balance</p>
+                    <span className="px-2 py-1 bg-green-500/10 text-green-400 rounded-lg text-[10px] font-bold border border-green-500/20 uppercase">Ready for Payout</span>
+                </div>
+                <h3 className="text-5xl font-black text-white mb-2 tracking-tighter">Rs {wallet.balance.toFixed(2)}</h3>
+                <p className="text-gray-400 text-sm font-medium">Net Earnings from completed & confirmed sessions.</p>
+                <div className="mt-6 flex gap-3">
+                    <button className="px-6 py-2 bg-teal-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-teal-400 transition shadow-lg shadow-teal-500/20">Request Payout</button>
+                    <button className="px-6 py-2 bg-gray-800 text-gray-300 border border-gray-700 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-700 transition">History</button>
+                </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-8 rounded-[2rem] border border-gray-700 shadow-2xl relative overflow-hidden group">
+                <div className="absolute -right-8 -bottom-8 w-40 h-40 bg-amber-500/5 rounded-full blur-3xl group-hover:bg-amber-500/10 transition-all duration-700"></div>
+                <div className="flex justify-between items-start mb-4">
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Held in Escrow</p>
+                    <span className="px-2 py-1 bg-amber-500/10 text-amber-400 rounded-lg text-[10px] font-bold border border-amber-500/20 uppercase">Pending Confirmation</span>
+                </div>
+                <h3 className="text-5xl font-black text-white mb-2 tracking-tighter">Rs {wallet.pending.toFixed(2)}</h3>
+                <p className="text-gray-400 text-sm font-medium">Funds held securely until students confirm session quality.</p>
+                <Link to="/my-sessions" className="mt-6 inline-block text-xs font-bold text-teal-400 hover:text-teal-300 transition-colors uppercase tracking-widest">View Pending Sessions →</Link>
+            </div>
+        </div>
+
+
         {/* Tutor schedule manager */}
         <section>
-          <TutorScheduleManager tutorId={user._id} />
+          <TutorScheduleManager 
+            tutorId={user._id} 
+            onManageQuiz={(sessionId) => {
+              setSelectedSessionId(sessionId);
+              setIsQuizModalOpen(true);
+            }} 
+          />
         </section>
+
+        <QuizCreatorModal
+            isOpen={isQuizModalOpen}
+            onClose={() => setIsQuizModalOpen(false)}
+            sessionId={selectedSessionId}
+            tutorId={user._id}
+        />
 
         {/* Student Feedback Section */}
         <section className="bg-gray-800 rounded-3xl p-6 md:p-8 border border-gray-700 shadow-xl">

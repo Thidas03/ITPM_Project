@@ -1,5 +1,6 @@
 const Session = require('../models/Session');
 const Booking = require('../models/Booking');
+const User = require('../models/User');
 
 // CREATE SESSION
 exports.createSession = async (req, res) => {
@@ -36,6 +37,40 @@ exports.createSession = async (req, res) => {
                     message: 'Session start time cannot be in the past today'
                 });
             }
+        }
+
+        const user = await User.findById(tutor);
+        if (!user) return res.status(404).json({ success: false, message: 'Tutor not found' });
+
+        // 1. Weekly Reset Logic
+        const now = new Date();
+        if (now > user.slotResetDate) {
+            user.extraSlots = 0;
+            const nextMonday = new Date();
+            nextMonday.setDate(now.getDate() + (1 + 7 - now.getDay()) % 7);
+            nextMonday.setHours(0, 0, 0, 0);
+            user.slotResetDate = nextMonday;
+            await user.save();
+        }
+
+        // 2. Count sessions in the current week
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - (now.getDay() + 6) % 7); // Monday
+        weekStart.setHours(0, 0, 0, 0);
+
+        const currentWeekSessions = await Session.countDocuments({
+            tutor,
+            createdAt: { $gte: weekStart }
+        });
+
+        const allowedSlots = 5 + user.extraSlots;
+
+        if (currentWeekSessions >= allowedSlots) {
+            return res.status(403).json({
+                success: false,
+                message: `Weekly session limit reached (${currentWeekSessions}/${allowedSlots}). Please purchase an extra slot to continue.`,
+                limitReached: true
+            });
         }
 
         const session = await Session.create({
