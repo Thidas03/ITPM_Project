@@ -187,7 +187,7 @@ const AdminDashboard = () => {
                                 { label: 'Total Users', value: stats?.users, color: 'blue', icon: '👥' },
                                 { label: 'Active Sessions', value: stats?.sessions, color: 'indigo', icon: '📅' },
                                 { label: 'Total Bookings', value: stats?.bookings, color: 'green', icon: '✅' },
-                                { label: 'Est. Revenue', value: `$${stats?.revenue}`, color: 'amber', icon: '💰' },
+                                { label: 'Est. Revenue', value: `Rs. ${stats?.revenue}`, color: 'amber', icon: '💰' },
                             ].map((s, i) => (
                                 <div key={i} className="bg-gray-800 p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/20 relative overflow-hidden group">
                                     <div className={`absolute top-0 right-0 p-4 text-4xl opacity-10 group-hover:scale-125 transition`}>{s.icon}</div>
@@ -396,7 +396,7 @@ const AdminDashboard = () => {
                             </div>
                             <div className="text-right">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total Processing Volume</p>
-                                <p className="text-3xl font-black text-teal-500">${transactions.reduce((sum, tx) => (sum + (tx.amount || 0)), 0).toLocaleString()}</p>
+                                <p className="text-3xl font-black text-teal-500">Rs. {transactions.reduce((sum, tx) => (sum + (tx.amount || 0)), 0).toLocaleString()}</p>
                             </div>
                         </div>
 
@@ -438,10 +438,10 @@ const AdminDashboard = () => {
                                                 </td>
                                                 <td className="px-8 py-5">
                                                     <div className="flex flex-col">
-                                                        <span className="text-sm font-black text-gray-300 leading-none mb-1">Total: ${tx.amount}</span>
+                                                        <span className="text-sm font-black text-gray-300 leading-none mb-1">Total: Rs. {tx.amount}</span>
                                                         <div className="flex gap-2 text-[9px] font-bold text-slate-500 uppercase">
-                                                            <span>Fee: <span className="text-teal-500">${tx.platformFee}</span></span>
-                                                            <span>Earn: <span className="text-indigo-400">${tx.tutorEarnings}</span></span>
+                                                            <span>Fee: <span className="text-teal-500">Rs. {tx.platformFee}</span></span>
+                                                            <span>Earn: <span className="text-indigo-400">Rs. {tx.tutorEarnings}</span></span>
                                                         </div>
                                                     </div>
                                                 </td>
