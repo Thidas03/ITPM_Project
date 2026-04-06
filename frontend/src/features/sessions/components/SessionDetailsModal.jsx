@@ -55,10 +55,17 @@ const SessionDetailsModal = ({ isOpen, onClose, session, tutorName, onConfirm })
                             <span className="text-white font-medium">{tutorName || 'N/A'}</span>
                         </div>
 
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center pb-3 border-b border-gray-700/50">
                             <span className="text-gray-400">Available Seats</span>
                             <span className={`font-bold ${availableSeats > 0 ? 'text-teal-400' : 'text-red-400'}`}>
                                 {availableSeats} {availableSeats === 1 ? 'seat' : 'seats'}
+                            </span>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                            <span className="text-gray-400">Price</span>
+                            <span className="text-teal-400 font-bold text-lg">
+                                {session.price > 0 ? `Rs ${session.price}` : 'Free'}
                             </span>
                         </div>
                     </div>

@@ -3,6 +3,7 @@ const Session = require('../models/Session');
 const Availability = require('../models/Availability');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const Transaction = require('../models/Transaction');
 
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -59,6 +60,19 @@ exports.createBooking = async (req, res) => {
                 status: 'upcoming'
             });
 
+            // Log a mock transaction for the booking
+            const amount = 50; // Mock price
+            await Transaction.create({
+                userId: studentId,
+                sessionId: availability._id,
+                stripeSessionId: `mock_stripe_${Math.random().toString(36).substring(2, 10)}`,
+                amount: amount,
+                platformFee: amount * 0.2,
+                tutorEarnings: amount * 0.8,
+                tutorId: availability.tutor,
+                status: 'completed'
+            });
+
             try {
                 const studentUser = await User.findById(studentId);
                 const studentName = studentUser ? studentUser.firstName : 'Unknown';
@@ -84,6 +98,18 @@ exports.createBooking = async (req, res) => {
                 student: studentId,
                 notes,
                 status: 'upcoming'
+            });
+
+            const amount = sessionDoc.price || 50;
+            await Transaction.create({
+                userId: studentId,
+                sessionId: session,
+                stripeSessionId: `mock_stripe_${Math.random().toString(36).substring(2, 10)}`,
+                amount: amount,
+                platformFee: amount * 0.2,
+                tutorEarnings: amount * 0.8,
+                tutorId: sessionDoc.tutor,
+                status: 'completed'
             });
 
             await Availability.findOneAndUpdate(
@@ -126,6 +152,18 @@ exports.createSessionBooking = async (req, res) => {
             bookingDate: sessionDay,
             meetingLink,
             status: 'upcoming'
+        });
+
+        const amount = session.price || 50;
+        await Transaction.create({
+            userId: studentId,
+            sessionId: session._id,
+            stripeSessionId: `mock_stripe_${Math.random().toString(36).substring(2, 10)}`,
+            amount: amount,
+            platformFee: amount * 0.2,
+            tutorEarnings: amount * 0.8,
+            tutorId: session.tutor,
+            status: 'completed'
         });
 
         session.currentParticipants += 1;

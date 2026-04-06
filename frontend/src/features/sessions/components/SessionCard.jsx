@@ -71,7 +71,14 @@ const SessionCard = ({ session, onBook, onViewDetails }) => {
                     </span>
                 </div>
 
-                <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
+                <div className="flex justify-between text-sm mt-2">
+                    <span className="text-gray-400">Price:</span>
+                    <span className="text-teal-400 font-bold">
+                        {session.price > 0 ? `Rs ${session.price}` : 'Free'}
+                    </span>
+                </div>
+
+                <div className="w-full bg-gray-700 rounded-full h-2 mt-3">
                     <div
                         className={`h-2 rounded-full ${isFull ? 'bg-red-500' : 'bg-teal-500'}`}
                         style={{ width: `${(session.currentParticipants / session.maxParticipants) * 100}%` }}
