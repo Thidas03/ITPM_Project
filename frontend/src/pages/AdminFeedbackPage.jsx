@@ -1,6 +1,7 @@
 // frontend/src/pages/AdminFeedbackPage.jsx
 
 import React, { useEffect, useState } from "react";
+import AdminSidebar from "../components/AdminSidebar";
 import {
   getAllFeedback,
   updateFeedbackStatus,
@@ -82,8 +83,10 @@ const AdminFeedbackPage = () => {
 
 
   return (
-    <div className="min-h-screen bg-[#0f172a] font-sans antialiased text-slate-300 px-6 py-12">
-      <main className="mx-auto max-w-7xl">
+    <div className="min-h-screen bg-[#f8fafc] font-sans antialiased text-slate-800 flex">
+      <AdminSidebar activeTab="ratings" />
+      <div className="flex-1 px-6 py-12 overflow-y-auto">
+        <main className="mx-auto max-w-7xl">
         {/* Dashboard Header */}
         <div className="mb-10 rounded-2xl border border-slate-800 bg-slate-900/50 p-8 shadow-2xl relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
@@ -92,10 +95,10 @@ const AdminFeedbackPage = () => {
           
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between relative z-10">
             <div>
-              <h1 className="text-4xl font-black text-white tracking-tight leading-none mb-3">
+              <h1 className="text-4xl font-black text-slate-800 tracking-tight leading-none mb-3 uppercase">
                 Admin Feedback Dashboard
               </h1>
-              <p className="text-slate-400 text-lg font-medium max-w-2xl">
+              <p className="text-slate-500 text-lg font-medium max-w-2xl">
                 View all feedback, update status, and manage submitted records across the platform.
               </p>
             </div>
@@ -234,7 +237,8 @@ const AdminFeedbackPage = () => {
             ))}
           </div>
         )}
-      </main>
+        </main>
+      </div>
     </div>
   );
 };

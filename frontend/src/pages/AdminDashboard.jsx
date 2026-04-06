@@ -1,15 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { toast } from 'react-toastify';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import AdminSidebar from '../components/AdminSidebar';
 
 const AdminDashboard = () => {
-    const [activeTab, setActiveTab] = useState('overview');
+    const location = useLocation();
+    const getTabFromUrl = (search) => new URLSearchParams(search).get('tab') || 'overview';
+
+    const [activeTab, setActiveTab] = useState(getTabFromUrl(location.search));
     const [stats, setStats] = useState(null);
     const [users, setUsers] = useState([]);
     const [sessions, setSessions] = useState([]);
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const tab = getTabFromUrl(location.search);
+        if (tab !== activeTab) setActiveTab(tab);
+    }, [location.search]);
 
     // Advanced CRUD State
     const [searchTerm, setSearchTerm] = useState('');
@@ -118,59 +127,16 @@ const AdminDashboard = () => {
 
     return (
         <div className="min-h-screen bg-[#f8fafc] flex">
-            {/* Left Sidebar */}
-            <aside className="w-72 bg-slate-900 text-white flex flex-col shadow-2xl sticky top-0 h-screen">
-                <div className="p-8 border-b border-slate-800">
-                    <h1 className="text-2xl font-black tracking-tighter text-white flex items-center gap-2">
-                        <span className="w-8 h-8 bg-gradient-to-r from-teal-500 to-indigo-600 rounded-lg flex items-center justify-center text-sm italic">S</span>
-                        STUEDU ADMIN
-                    </h1>
-                </div>
-                <nav className="flex-1 p-6 space-y-2">
-                    {[
-                        { id: 'overview', label: 'Dashboard', icon: '📊' },
-                        { id: 'users', label: 'User Control', icon: '👥' },
-                        { id: 'sessions', label: 'Sessions', icon: '📅' },
-                        { id: 'history_link', label: 'My History', icon: '📜', path: '/admin/history' },
-                        { id: 'payments', label: 'Financials', icon: '💳' },
-                        { id: 'ratings', label: 'Feedback', icon: '⭐', path: '/admin-feedback' },
-                    ].map(item => (
-                        item.path ? (
-                            <Link
-                                key={item.id}
-                                to={item.path}
-                                className="w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all font-bold text-sm text-slate-400 hover:bg-slate-800 hover:text-white"
-                            >
-                                <span className="text-xl">{item.icon}</span>
-                                {item.label}
-                            </Link>
-                        ) : (
-                            <button
-                                key={item.id}
-                                onClick={() => setActiveTab(item.id)}
-                                className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all font-bold text-sm ${activeTab === item.id ? 'bg-gradient-to-r from-teal-600 to-indigo-700 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-                            >
-                                <span className="text-xl">{item.icon}</span>
-                                {item.label}
-                            </button>
-                        )
-                    ))}
-                </nav>
-                <div className="p-6 border-t border-slate-800">
-                    <Link to="/dashboard" className="flex items-center gap-3 text-slate-400 hover:text-white transition group font-bold text-sm">
-                        <span className="group-hover:-translate-x-1 transition">←</span> Exit to System
-                    </Link>
-                </div>
-            </aside>
+            <AdminSidebar activeTab={activeTab} onTabClick={setActiveTab} />
 
             {/* Main Content Area */}
             <main className="flex-1 p-10 overflow-y-auto">
                 <header className="flex justify-between items-end mb-10">
                     <div>
-                        <h2 className="text-3xl font-black text-gray-300 uppercase tracking-tight">
+                        <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tight">
                             {activeTab.replace('-', ' ')}
                         </h2>
-                        <p className="text-slate-400 font-medium">System-wide administrative control panel</p>
+                        <p className="text-slate-500 font-medium">System-wide administrative control panel</p>
                     </div>
                     <div className="flex gap-4">
                         <button onClick={fetchAdminData} className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl font-bold text-gray-400 hover:bg-gray-900 transition shadow-sm">
@@ -187,7 +153,7 @@ const AdminDashboard = () => {
                                 { label: 'Total Users', value: stats?.users, color: 'blue', icon: '👥' },
                                 { label: 'Active Sessions', value: stats?.sessions, color: 'indigo', icon: '📅' },
                                 { label: 'Total Bookings', value: stats?.bookings, color: 'green', icon: '✅' },
-                                { label: 'Est. Revenue', value: `$${stats?.revenue}`, color: 'amber', icon: '💰' },
+                                { label: 'Est. Revenue', value: `Rs. ${stats?.revenue}`, color: 'amber', icon: '💰' },
                             ].map((s, i) => (
                                 <div key={i} className="bg-gray-800 p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/20 relative overflow-hidden group">
                                     <div className={`absolute top-0 right-0 p-4 text-4xl opacity-10 group-hover:scale-125 transition`}>{s.icon}</div>
@@ -396,7 +362,7 @@ const AdminDashboard = () => {
                             </div>
                             <div className="text-right">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Total Processing Volume</p>
-                                <p className="text-3xl font-black text-teal-500">${transactions.reduce((sum, tx) => (sum + (tx.amount || 0)), 0).toLocaleString()}</p>
+                                <p className="text-3xl font-black text-teal-500">Rs. {transactions.reduce((sum, tx) => (sum + (tx.amount || 0)), 0).toLocaleString()}</p>
                             </div>
                         </div>
 
@@ -438,10 +404,10 @@ const AdminDashboard = () => {
                                                 </td>
                                                 <td className="px-8 py-5">
                                                     <div className="flex flex-col">
-                                                        <span className="text-sm font-black text-gray-300 leading-none mb-1">Total: ${tx.amount}</span>
+                                                        <span className="text-sm font-black text-gray-300 leading-none mb-1">Total: Rs. {tx.amount}</span>
                                                         <div className="flex gap-2 text-[9px] font-bold text-slate-500 uppercase">
-                                                            <span>Fee: <span className="text-teal-500">${tx.platformFee}</span></span>
-                                                            <span>Earn: <span className="text-indigo-400">${tx.tutorEarnings}</span></span>
+                                                            <span>Fee: <span className="text-teal-500">Rs. {tx.platformFee}</span></span>
+                                                            <span>Earn: <span className="text-indigo-400">Rs. {tx.tutorEarnings}</span></span>
                                                         </div>
                                                     </div>
                                                 </td>

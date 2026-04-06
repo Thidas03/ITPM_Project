@@ -31,7 +31,7 @@ exports.getDashboardStats = async (req, res) => {
         const bookingCount = await Booking.countDocuments();
 
         // Simple revenue calculation (mocked for now)
-        const totalRevenue = bookingCount * 25; // Assuming $25 average
+        const totalRevenue = bookingCount * 2500; // Assuming Rs. 2500 average per session
 
         res.json({
             success: true,
