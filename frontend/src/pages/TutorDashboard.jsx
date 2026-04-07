@@ -305,15 +305,6 @@ const TutorDashboard = () => {
               </svg>
               Student Feedback
             </h2>
-            <Link
-              to="/my-reviews"
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-teal-400 text-sm font-medium rounded-xl transition-colors border border-gray-600 hover:border-teal-500 shadow-sm flex items-center gap-2"
-            >
-              View Full Reviews Page
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-              </svg>
-            </Link>
           </div>
           {loadingFeedbacks ? (
             <div className="text-center py-12 bg-gray-900/50 rounded-2xl border border-gray-700 border-dashed">

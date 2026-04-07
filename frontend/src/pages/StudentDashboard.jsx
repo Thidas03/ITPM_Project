@@ -364,20 +364,32 @@ const StudentDashboard = () => {
           </div>
 
           {/* Tutor selector */}
-          <div className="bg-gray-800 border border-gray-700 rounded-2xl px-4 py-3 flex items-center gap-3 shadow-lg w-full md:w-auto">
-            <div className="flex flex-col">
-              <span className="text-xs uppercase tracking-wide text-gray-400">Viewing tutor</span>
-              <select
-                className="mt-1 bg-transparent text-sm text-white font-medium focus:outline-none"
-                value={selectedTutorId}
-                onChange={(e) => setSelectedTutorId(e.target.value)}
-              >
-                {tutors.map((tutor) => (
-                  <option key={tutor._id} value={tutor._id} className="bg-gray-900 text-white">
-                    {tutor.name}
-                  </option>
-                ))}
-              </select>
+          <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
+            <Link
+              to="/tutor-reviews"
+              className="px-4 py-3 bg-gray-700 hover:bg-gray-600 text-teal-400 text-sm font-medium rounded-xl transition-colors border border-gray-600 hover:border-teal-500 shadow-sm flex items-center gap-2"
+            >
+              View Tutor Reviews
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+            
+            <div className="bg-gray-800 border border-gray-700 rounded-2xl px-4 py-3 flex items-center gap-3 shadow-lg w-full md:w-auto">
+              <div className="flex flex-col">
+                <span className="text-xs uppercase tracking-wide text-gray-400">Viewing tutor</span>
+                <select
+                  className="mt-1 bg-transparent text-sm text-white font-medium focus:outline-none"
+                  value={selectedTutorId}
+                  onChange={(e) => setSelectedTutorId(e.target.value)}
+                >
+                  {tutors.map((tutor) => (
+                    <option key={tutor._id} value={tutor._id} className="bg-gray-900 text-white">
+                      {tutor.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </header>
