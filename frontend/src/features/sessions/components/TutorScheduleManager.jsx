@@ -282,8 +282,8 @@ const TutorScheduleManager = ({ tutorId, onManageQuiz }) => {
                 </div>
             )}
 
-            <div className="flex flex-wrap gap-4 mb-8">
-                <header className="mb-8">
+            <div className="w-full mb-8 space-y-6">
+                <header className="mb-4">
                     <h1 className="text-4xl font-extrabold text-gray-300">
                         Work Schedule
                     </h1>

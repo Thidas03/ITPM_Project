@@ -12,7 +12,7 @@ const Success = () => {
             </div>
             <h1>Welcome to Premium!</h1>
             <p>Your subscription was successful. You now have access to all premium features including the AI Summarizer.</p>
-            <button className="btn btn-primary" style={{ marginTop: '2rem', maxWidth: '300px' }} onClick={() => navigate('/')}>
+            <button className="btn btn-primary" style={{ marginTop: '2rem', maxWidth: '300px' }} onClick={() => navigate('/dashboard/student')}>
                 Back to Dashboard
             </button>
         </div>

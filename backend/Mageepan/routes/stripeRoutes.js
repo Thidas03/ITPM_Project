@@ -143,8 +143,8 @@ router.post(
                     },
                     quantity: 1,
                 }],
-                success_url: `${process.env.FRONTEND_URL}/dashboard?recharge=success`,
-                cancel_url: `${process.env.FRONTEND_URL}/dashboard?recharge=cancel`,
+                success_url: `${process.env.FRONTEND_URL}/dashboard/student?recharge=success`,
+                cancel_url: `${process.env.FRONTEND_URL}/dashboard/student?recharge=cancel`,
                 metadata: {
                     type: 'wallet_recharge',
                     userId: userId,

@@ -68,6 +68,18 @@ exports.payWithWallet = async (req, res) => {
         });
         await booking.save();
 
+        try {
+            const studentUser = await User.findById(userId);
+            const studentName = studentUser ? studentUser.firstName : 'Unknown';
+            const Notification = require('../../models/Notification');
+            await Notification.create({
+                recipient: session.tutor,
+                message: `${studentName} has booked your scheduled session for ${new Date(session.date).toDateString()}.`,
+                relatedBooking: booking._id,
+                type: 'booking'
+            });
+        } catch (notifErr) { console.error('Notification Error:', notifErr); }
+
         // 6. Record Transaction
         const platformCommission = finalAmount * 0.10;
         const tutorEarnings = finalAmount * 0.90;
@@ -232,6 +244,18 @@ exports.processMockCardPayment = async (req, res) => {
             status: 'upcoming'
         });
         await booking.save();
+
+        try {
+            const studentUser = await User.findById(userId);
+            const studentName = studentUser ? studentUser.firstName : 'Unknown';
+            const Notification = require('../../models/Notification');
+            await Notification.create({
+                recipient: session.tutor,
+                message: `${studentName} has booked your scheduled session for ${new Date(session.date).toDateString()}.`,
+                relatedBooking: booking._id,
+                type: 'booking'
+            });
+        } catch (notifErr) { console.error('Notification Error:', notifErr); }
 
         const transaction = new Transaction({
             userId,

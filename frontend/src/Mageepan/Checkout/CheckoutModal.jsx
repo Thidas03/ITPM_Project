@@ -125,7 +125,7 @@ const CheckoutModal = ({ isOpen, onClose, selectedItem, onSuccess }) => {
                         if (onSuccess) onSuccess();
                         setTimeout(() => {
                             onClose();
-                            navigate('/dashboard');
+                            navigate('/dashboard/student');
                         }, 1500);
                     }
                 } catch (error) {
@@ -156,7 +156,7 @@ const CheckoutModal = ({ isOpen, onClose, selectedItem, onSuccess }) => {
                     if (onSuccess) onSuccess();
                     setTimeout(() => {
                         onClose();
-                        navigate('/dashboard');
+                        navigate('/dashboard/student');
                     }, 1500);
                 }
             } catch (error) {
@@ -219,7 +219,7 @@ const CheckoutModal = ({ isOpen, onClose, selectedItem, onSuccess }) => {
                             <button 
                                 type="button" 
                                 className="btn btn-secondary" 
-                                onClick={() => navigate('/dashboard')}
+                                onClick={() => navigate('/dashboard/student')}
                                 style={{ marginTop: '0.5rem', fontSize: '0.75rem' }}
                             >
                                 Recharge Wallet

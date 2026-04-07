@@ -117,6 +117,17 @@ exports.createBooking = async (req, res) => {
                 { $addToSet: { enrolledStudents: studentId } }
             );
 
+            try {
+                const studentUser = await User.findById(studentId);
+                const studentName = studentUser ? studentUser.firstName : 'Unknown';
+                await Notification.create({
+                    recipient: sessionDoc.tutor,
+                    message: `${studentName} booked your session.`,
+                    relatedBooking: booking._id,
+                    type: 'booking'
+                });
+            } catch (notifErr) {}
+
             return res.status(201).json({ success: true, booking });
         }
     } catch (error) {
@@ -171,6 +182,17 @@ exports.createSessionBooking = async (req, res) => {
             session.status = 'booked';
         }
         await session.save();
+
+        try {
+            const studentUser = await User.findById(studentId);
+            const studentName = studentUser ? studentUser.firstName : 'Unknown';
+            await Notification.create({
+                recipient: session.tutor,
+                message: `${studentName} has booked your scheduled session for ${sessionDay.toDateString()}.`,
+                relatedBooking: booking._id,
+                type: 'booking'
+            });
+        } catch (notifErr) {}
 
         res.status(201).json({ success: true, data: booking });
     } catch (error) {
@@ -250,6 +272,18 @@ exports.cancelBooking = async (req, res) => {
                 { $pull: { enrolledStudents: req.user._id } }
             );
         }
+
+        try {
+            const studentUser = await User.findById(req.user._id);
+            const studentName = studentUser ? studentUser.firstName : 'Unknown';
+            const bookingDateStr = booking.bookingDate ? new Date(booking.bookingDate).toDateString() : 'a session';
+            await Notification.create({
+                recipient: booking.tutor,
+                message: `${studentName} has cancelled their booking for ${bookingDateStr}.`,
+                relatedBooking: booking._id,
+                type: 'system'
+            });
+        } catch (notifErr) {}
 
         res.status(200).json({ success: true, message: 'Booking cancelled successfully', data: booking });
     } catch (error) {

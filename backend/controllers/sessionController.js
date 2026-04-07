@@ -65,13 +65,14 @@ exports.createSession = async (req, res) => {
 
         const allowedSlots = 5 + user.extraSlots;
 
-        if (currentWeekSessions >= allowedSlots) {
-            return res.status(403).json({
-                success: false,
-                message: `Weekly session limit reached (${currentWeekSessions}/${allowedSlots}). Please purchase an extra slot to continue.`,
-                limitReached: true
-            });
-        }
+        // Bypassing the weekly session limit check as per user request
+        // if (currentWeekSessions >= allowedSlots) {
+        //     return res.status(403).json({
+        //         success: false,
+        //         message: `Weekly session limit reached (${currentWeekSessions}/${allowedSlots}). Please purchase an extra slot to continue.`,
+        //         limitReached: true
+        //     });
+        // }
 
         const session = await Session.create({
             tutor,
@@ -116,15 +117,34 @@ exports.getSessionsByTutor = async (req, res) => {
 // DELETE SESSION
 exports.deleteSession = async (req, res) => {
     try {
-        const session = await Session.findByIdAndDelete(req.params.sessionId);
+        const session = await Session.findById(req.params.sessionId);
 
         if (!session) {
             return res.status(404).json({ success: false, message: 'Session not found' });
         }
 
+        // Cancel bookings and notify students
+        const bookings = await Booking.find({ session: session._id, status: { $ne: 'cancelled' } });
+        for (const booking of bookings) {
+            booking.status = 'cancelled';
+            await booking.save();
+
+            const Notification = require('../models/Notification');
+            try {
+                await Notification.create({
+                    recipient: booking.student,
+                    message: `Your session on ${new Date(session.date).toDateString()} at ${session.startTime} has been deleted/cancelled by the tutor.`,
+                    relatedBooking: booking._id,
+                    type: 'system'
+                });
+            } catch (err) {}
+        }
+
+        await Session.findByIdAndDelete(req.params.sessionId);
+
         res.status(200).json({
             success: true,
-            message: "Session deleted"
+            message: "Session deleted and students notified"
         });
     } catch (error) {
         res.status(400).json({
