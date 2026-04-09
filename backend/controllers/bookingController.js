@@ -331,24 +331,46 @@ exports.rateBooking = async (req, res) => {
 exports.getSessionDetails = async (req, res) => {
     try {
         const sessionId = req.params.sessionId;
-        const studentId = req.user._id;
+        const userId = req.user._id;
+
+        // 1) Weekly/availability-based "session"
         const availability = await Availability.findById(sessionId);
+        if (availability) {
+            if (!availability.enrolledStudents.includes(userId)) {
+                return res.status(403).json({ success: false, error: 'Access Denied: You must book this session to view details' });
+            }
 
-        if (!availability) return res.status(404).json({ success: false, error: 'Session not found' });
+            const sessionDetails = {
+                id: availability._id,
+                startTime: availability.startTime,
+                endTime: availability.endTime,
+                meetingLink: 'https://meet.jit.si/' + availability._id,
+                password: 'STU_PASS_' + availability._id.toString().slice(-4).toUpperCase()
+            };
 
-        if (!availability.enrolledStudents.includes(studentId)) {
-            return res.status(403).json({ success: false, error: 'Access Denied: You must book this session to view details' });
+            return res.status(200).json({ success: true, data: sessionDetails });
+        }
+
+        // 2) Scheduled session (Session model)
+        const session = await Session.findById(sessionId).select('tutor startTime endTime meetingLink password');
+        if (!session) return res.status(404).json({ success: false, error: 'Session not found' });
+
+        const isTutor = session.tutor.toString() === userId.toString();
+        const hasBooking = await Booking.findOne({ session: sessionId, student: userId }).select('_id');
+
+        if (!isTutor && !hasBooking) {
+            return res.status(403).json({ success: false, error: 'Access Denied: You must book this session first.' });
         }
 
         const sessionDetails = {
-            id: availability._id,
-            startTime: availability.startTime,
-            endTime: availability.endTime,
-            meetingLink: 'https://meet.jit.si/' + availability._id,
-            password: 'STU_PASS_' + availability._id.toString().slice(-4).toUpperCase()
+            id: session._id,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            meetingLink: session.meetingLink || ('https://meet.jit.si/' + session._id),
+            password: session.password || ''
         };
 
-        res.status(200).json({ success: true, data: sessionDetails });
+        return res.status(200).json({ success: true, data: sessionDetails });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }

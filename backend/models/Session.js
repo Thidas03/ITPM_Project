@@ -35,7 +35,7 @@ const SessionSchema = new mongoose.Schema({
     },
     meetingLink: {
         type: String,
-        default: 'https://zoom.us/j/mock_meeting_id'
+        default: ''
     },
     maxParticipants: {
         type: Number,

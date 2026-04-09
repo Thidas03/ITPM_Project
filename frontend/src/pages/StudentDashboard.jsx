@@ -14,6 +14,7 @@ import { FaCalendarAlt, FaClock, FaUser, FaLink, FaCheckCircle, FaExclamationCir
 
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import { getLastReadAt } from '../features/chat/utils/unread';
 
 const parseSessionTime = (dateStr, timeStr) => {
   if (!dateStr || !timeStr || timeStr === 'N/A') return null;
@@ -54,6 +55,7 @@ const StudentDashboard = () => {
   const [checkoutSessionData, setCheckoutSessionData] = useState(null);
   const [trustProfile, setTrustProfile] = useState(null);
   const [walletBalance, setWalletBalance] = useState(0);
+  const [unreadCountBySession, setUnreadCountBySession] = useState({});
 
   useEffect(() => {
     const fetchTrustProfile = async () => {
@@ -168,13 +170,75 @@ const StudentDashboard = () => {
     try {
       setLoadingBookings(true);
       const data = await getStudentBookings(user._id);
-      setStudentBookings(data.data || data);
+      const nextBookings = data.data || data;
+      setStudentBookings(nextBookings);
+
+      // Trigger unread refresh immediately after load
+      const sessionIds = Array.from(new Set(
+        (nextBookings || [])
+          .map(b => b?.session?._id)
+          .filter(Boolean)
+      ));
+      if (sessionIds.length > 0) {
+        const results = await Promise.all(
+          sessionIds.map(async (sid) => {
+            try {
+              const sinceMs = getLastReadAt(sid);
+              const sinceIso = new Date(sinceMs || 0).toISOString();
+              const { data: resp } = await api.get(`/messages/${sid}/unread-count`, { params: { since: sinceIso, _: Date.now() } });
+              return [sid, Number(resp?.data?.count || 0)];
+            } catch {
+              return [sid, 0];
+            }
+          })
+        );
+        setUnreadCountBySession(Object.fromEntries(results));
+      }
     } catch (error) {
       console.error('Failed to fetch student bookings', error);
     } finally {
       setLoadingBookings(false);
     }
   };
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadUnread = async () => {
+      try {
+        const sessionIds = Array.from(new Set(
+          (studentBookings || [])
+            .map(b => b?.session?._id)
+            .filter(Boolean)
+        ));
+        if (sessionIds.length === 0) {
+          if (mounted) setUnreadCountBySession({});
+          return;
+        }
+
+        const results = await Promise.all(
+          sessionIds.map(async (sid) => {
+            try {
+              const sinceMs = getLastReadAt(sid);
+              const sinceIso = new Date(sinceMs || 0).toISOString();
+              const { data } = await api.get(`/messages/${sid}/unread-count`, { params: { since: sinceIso, _: Date.now() } });
+              return [sid, Number(data?.data?.count || 0)];
+            } catch {
+              return [sid, 0];
+            }
+          })
+        );
+        if (mounted) setUnreadCountBySession(Object.fromEntries(results));
+      } catch {}
+    };
+
+    loadUnread();
+    const id = setInterval(loadUnread, 5000);
+    return () => {
+      mounted = false;
+      clearInterval(id);
+    };
+  }, [studentBookings]);
 
   const handleBookingSuccess = () => {
     fetchAvailableSlots();
@@ -609,6 +673,13 @@ const StudentDashboard = () => {
                   }
 
                   const canJoin = startDateTime && endDateTime && (currentTime >= new Date(startDateTime.getTime() - 10 * 60000) && currentTime <= endDateTime);
+                  const meetingLink =
+                    booking.meetingLink ||
+                    booking.session?.meetingLink ||
+                    (booking.session?._id ? `https://meet.jit.si/${booking.session._id}` : '');
+                  const normalizedMeetingLink = meetingLink && meetingLink.includes('zoom.us')
+                    ? meetingLink.replace('https://zoom.us', 'https://meet.jit.si')
+                    : meetingLink;
 
                   return (
                     <div
@@ -635,10 +706,10 @@ const StudentDashboard = () => {
                             Tutor: <span className="text-gray-200 font-semibold">{booking.tutor?.name || 'N/A'}</span>
                           </div>
 
-                          {booking.meetingLink && (
+                          {normalizedMeetingLink && (
                             <div className="text-sm text-gray-400 flex items-center gap-2">
                               <FaLink className="text-teal-400" />
-                              Meeting: <a href={booking.meetingLink} target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline font-medium">Join Jitsi Meet</a>
+                              Meeting: <a href={normalizedMeetingLink} target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline font-medium">Join Jitsi Meet</a>
                             </div>
                           )}
                           
@@ -651,15 +722,28 @@ const StudentDashboard = () => {
                       </div>
 
                       <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
-                        {booking.meetingLink && (
+                        {booking.session?._id && booking.status !== 'cancelled' && (
+                          <button
+                            onClick={() => navigate(`/session/${booking.session._id}`)}
+                            className="relative flex-1 md:flex-none px-4 py-2 rounded-xl border border-teal-500/50 text-teal-300 text-sm font-bold hover:bg-teal-500/10 transition-colors"
+                          >
+                            Open Chat
+                            {unreadCountBySession[booking.session._id] > 0 && (
+                              <span className="absolute -top-2 -right-2 inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-black border border-gray-900">
+                                {unreadCountBySession[booking.session._id] > 99 ? '99+' : unreadCountBySession[booking.session._id]}
+                              </span>
+                            )}
+                          </button>
+                        )}
+                        {normalizedMeetingLink && (
                           <a
-                            href={booking.meetingLink}
+                            href={normalizedMeetingLink}
                             target="_blank"
                             rel="noopener noreferrer"
                             className={`flex-1 md:flex-none px-6 py-2 text-white text-sm font-bold rounded-xl shadow-lg transition-all text-center flex items-center justify-center gap-2 ${canJoin ? 'bg-gradient-to-r from-teal-500 to-indigo-600 hover:shadow-teal-500/25 cursor-pointer' : 'bg-gray-600 cursor-not-allowed opacity-50'}`}
                             onClick={(e) => { if (!canJoin) e.preventDefault(); }}
                           >
-                            <FaLink /> Join Meeting
+                            <FaLink /> Join Jitsi
                           </a>
                         )}
                         {sessionPhase === 'upcoming' && booking.status !== 'cancelled' && (

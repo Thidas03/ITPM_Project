@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { getTutorSessions, createSession, updateSession, deleteSession, getSessionParticipants, cancelSession } from '../services/sessionService';
@@ -7,6 +8,7 @@ import AvailabilityManager from './AvailabilityManager';
 import { FaUsers, FaLink, FaCalendarAlt, FaClock, FaCheckCircle, FaExclamationCircle, FaHistory, FaGem } from 'react-icons/fa';
 import api from '../../../services/api';
 import ConfirmationModal from '../../common/components/ConfirmationModal';
+import { getLastReadAt } from '../../chat/utils/unread';
 
 const parseSessionTime = (dateStr, timeStr) => {
   if (!dateStr || !timeStr || timeStr === 'N/A') return null;
@@ -25,6 +27,7 @@ const parseSessionTime = (dateStr, timeStr) => {
 };
 
 const TutorScheduleManager = ({ tutorId, onManageQuiz }) => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('sessions');
 
     // Sessions state
@@ -47,6 +50,7 @@ const TutorScheduleManager = ({ tutorId, onManageQuiz }) => {
     const [cancelSessionId, setCancelSessionId] = useState(null);
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const [cancelingSession, setCancelingSession] = useState(false);
+    const [unreadCountBySession, setUnreadCountBySession] = useState({});
 
     // Slot management state
     const [tutorData, setTutorData] = useState(null);
@@ -100,13 +104,77 @@ const TutorScheduleManager = ({ tutorId, onManageQuiz }) => {
             setLoading(true);
             const data = await getTutorSessions(tutorId);
             // Assuming data is an array of sessions. Handle response format accordingly.
-            setSessions(data.data || data);
+            const nextSessions = data.data || data;
+            setSessions(nextSessions);
+
+            // Trigger unread refresh immediately after load
+            const sessionIds = Array.from(new Set(
+                (nextSessions || [])
+                    .filter(s => s.status !== 'cancelled' && s.currentParticipants > 0)
+                    .map(s => s._id)
+                    .filter(Boolean)
+            ));
+            if (sessionIds.length > 0) {
+                const results = await Promise.all(
+                    sessionIds.map(async (sid) => {
+                        try {
+                            const sinceMs = getLastReadAt(sid);
+                            const sinceIso = new Date(sinceMs || 0).toISOString();
+                            const { data: resp } = await api.get(`/messages/${sid}/unread-count`, { params: { since: sinceIso, _: Date.now() } });
+                            return [sid, Number(resp?.data?.count || 0)];
+                        } catch {
+                            return [sid, 0];
+                        }
+                    })
+                );
+                setUnreadCountBySession(Object.fromEntries(results));
+            }
         } catch (error) {
             toast.error('Failed to load sessions');
         } finally {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        let mounted = true;
+
+        const loadUnread = async () => {
+            try {
+                const sessionIds = Array.from(new Set(
+                    (sessions || [])
+                        .filter(s => s.status !== 'cancelled' && s.currentParticipants > 0)
+                        .map(s => s._id)
+                        .filter(Boolean)
+                ));
+                if (sessionIds.length === 0) {
+                    if (mounted) setUnreadCountBySession({});
+                    return;
+                }
+
+                const results = await Promise.all(
+                    sessionIds.map(async (sid) => {
+                        try {
+                            const sinceMs = getLastReadAt(sid);
+                            const sinceIso = new Date(sinceMs || 0).toISOString();
+                            const { data } = await api.get(`/messages/${sid}/unread-count`, { params: { since: sinceIso, _: Date.now() } });
+                            return [sid, Number(data?.data?.count || 0)];
+                        } catch {
+                            return [sid, 0];
+                        }
+                    })
+                );
+                if (mounted) setUnreadCountBySession(Object.fromEntries(results));
+            } catch {}
+        };
+
+        loadUnread();
+        const id = setInterval(loadUnread, 5000);
+        return () => {
+            mounted = false;
+            clearInterval(id);
+        };
+    }, [sessions]);
 
     const handleCreateSession = async (e) => {
         e.preventDefault();
@@ -370,6 +438,10 @@ const TutorScheduleManager = ({ tutorId, onManageQuiz }) => {
                                     }
                                     
                                     const canJoin = startDateTime && endDateTime && (currentTime >= new Date(startDateTime.getTime() - 10 * 60000) && currentTime <= endDateTime);
+                                    const meetingLink = session.meetingLink || `https://meet.jit.si/${session._id}`;
+                                    const normalizedMeetingLink = meetingLink.includes('zoom.us')
+                                        ? meetingLink.replace('https://zoom.us', 'https://meet.jit.si')
+                                        : meetingLink;
 
                                     return (
                                         <div key={session._id} className="p-5 bg-gray-900 rounded-xl border border-gray-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-teal-500/50 transition-colors">
@@ -384,10 +456,10 @@ const TutorScheduleManager = ({ tutorId, onManageQuiz }) => {
                                                         <span className="flex items-center gap-1.5 text-sm text-gray-400">
                                                             <FaUsers className="text-indigo-400" /> {session.currentParticipants} / {session.maxParticipants} students
                                                         </span>
-                                                        {session.meetingLink && (
+                                                        {normalizedMeetingLink && (
                                                             <span className="flex items-center gap-1.5 text-sm text-gray-400">
                                                                 <FaLink className="text-teal-400" /> 
-                                                                Meeting: <a href={session.meetingLink} target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">Link Set</a>
+                                                                Meeting: <a href={normalizedMeetingLink} target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">Jitsi Link</a>
                                                             </span>
                                                         )}
                                                     </div>
@@ -397,17 +469,26 @@ const TutorScheduleManager = ({ tutorId, onManageQuiz }) => {
                                                 </div>
                                             </div>
                                             <div className="flex flex-col gap-2 min-w-[180px]">
-                                                {session.meetingLink && (
-                                                    <a
-                                                        href={session.meetingLink}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className={`px-4 py-2 text-white text-sm font-bold rounded-lg transition-all text-center flex items-center justify-center gap-2 ${canJoin ? 'bg-gradient-to-r from-teal-500 to-indigo-600 hover:shadow-teal-500/25 cursor-pointer' : 'bg-gray-600 cursor-not-allowed opacity-50'}`}
-                                                        onClick={(e) => { if (!canJoin) e.preventDefault(); }}
-                                                    >
-                                                        <FaLink /> Join Meeting
-                                                    </a>
-                                                )}
+                                                <button
+                                                    onClick={() => navigate(`/session/${session._id}`)}
+                                                    className="relative px-4 py-2 border border-teal-500/40 hover:bg-teal-500/10 text-teal-300 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                                                >
+                                                    Open Chat
+                                                    {unreadCountBySession[session._id] > 0 && (
+                                                        <span className="absolute -top-2 -right-2 inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-black border border-gray-900">
+                                                            {unreadCountBySession[session._id] > 99 ? '99+' : unreadCountBySession[session._id]}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                                <a
+                                                    href={normalizedMeetingLink}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={`px-4 py-2 text-white text-sm font-bold rounded-lg transition-all text-center flex items-center justify-center gap-2 ${canJoin ? 'bg-gradient-to-r from-teal-500 to-indigo-600 hover:shadow-teal-500/25 cursor-pointer' : 'bg-gray-600 cursor-not-allowed opacity-50'}`}
+                                                    onClick={(e) => { if (!canJoin) e.preventDefault(); }}
+                                                >
+                                                    <FaLink /> Join Jitsi
+                                                </a>
                                                 <button
                                                     onClick={() => handleFetchParticipants(session)}
                                                     className="px-4 py-2 border border-indigo-500/30 hover:bg-indigo-500/10 text-indigo-400 text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2"

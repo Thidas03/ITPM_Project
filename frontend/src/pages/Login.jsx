@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { GoogleLogin } from '@react-oauth/google';
+import authBg from '../assets/auth-bg.png';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -55,8 +56,17 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
-            <div className="max-w-md w-full space-y-8 p-10 bg-gray-800 rounded-3xl shadow-xl shadow-black/40 border border-gray-700">
+        <div
+            className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden"
+            style={{
+                backgroundImage: `url(${authBg})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat'
+            }}
+        >
+            <div className="pointer-events-none absolute inset-0 bg-gray-950/70" />
+            <div className="relative z-10 max-w-md w-full space-y-8 p-10 bg-gray-900/70 backdrop-blur-md rounded-3xl shadow-xl shadow-black/40 border border-gray-700">
                 <div>
                     <h2 className="mt-6 text-center text-3xl font-extrabold text-teal-400">
                         Welcome Back

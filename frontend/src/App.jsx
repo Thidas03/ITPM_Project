@@ -29,41 +29,50 @@ import FeedbackPage from "./pages/FeedbackPage";
 import TutorReviewsPage from "./pages/TutorReviewsPage";
 import AdminFeedbackPage from "./pages/AdminFeedbackPage";
 import MyReviewsPage from "./pages/MyReviewsPage";
+import authBg from './assets/auth-bg.png';
 
 
 
 const Home = () => {
   return (
-    <>
+    <div
+      className="relative min-h-screen overflow-hidden"
+      style={{
+        backgroundImage: `url(${authBg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-gray-950/70" />
+
       {/* Hero Section */}
-      <header className="max-w-7xl mx-auto px-6 py-20 flex flex-col items-center text-center">
-        <span className="px-4 py-1.5 bg-teal-500/20 text-teal-400 rounded-full text-sm font-bold mb-6 animate-bounce">
+      <header className="relative z-10 max-w-7xl mx-auto px-6 py-20 flex flex-col items-center text-center">
+        <span className="px-4 py-1.5 bg-teal-500/20 text-teal-300 rounded-full text-sm font-bold mb-6 animate-bounce border border-teal-500/30">
           New Peer Sessions Available!
         </span>
-        <h1 className="text-6xl md:text-7xl font-extrabold text-gray-300 mb-8 tracking-tight">
+        <h1 className="text-6xl md:text-7xl font-extrabold text-gray-100 mb-8 tracking-tight drop-shadow">
           Learn from Peers, <br />
-          <span className="text-teal-500">Master your Future.</span>
+          <span className="text-teal-300">Master your Future.</span>
         </h1>
-        <p className="text-xl text-gray-400 max-w-2xl mb-12">
+        <p className="text-xl text-gray-200/80 max-w-2xl mb-12">
           The ultimate Campus Peer Tutoring platform. Connect with the best tutors in your campus, manage your sessions, and excel in every subject with STUEDU.
         </p>
         <div className="flex flex-wrap gap-4 justify-center">
           <Link to="/login" className="px-8 py-4 bg-gradient-to-r from-teal-500 to-indigo-600 text-white rounded-2xl font-bold hover:from-teal-400 hover:to-indigo-500 transition text-lg shadow-xl shadow-teal-500/20 flex items-center gap-2">
             Explore Sessions 🚀
           </Link>
-          <Link to="/register" className="px-8 py-4 bg-gray-800 text-gray-400 rounded-2xl font-bold hover:bg-gray-900 transition border border-gray-700 text-lg shadow-md">
+          <Link to="/register" className="px-8 py-4 bg-gray-900/60 backdrop-blur-md text-gray-200 rounded-2xl font-bold hover:bg-gray-900/70 transition border border-gray-700 text-lg shadow-md">
             Join the Community
           </Link>
         </div>
       </header>
 
-
-
       {/* Footer */}
-      <footer className="py-10 text-center text-slate-400 border-t border-gray-700">
+      <footer className="relative z-10 py-10 text-center text-slate-300/80 border-t border-gray-700/70">
         &copy; 2026 STUEDU Campus Tutors. All rights reserved.
       </footer>
-    </>
+    </div>
   );
 };
 
