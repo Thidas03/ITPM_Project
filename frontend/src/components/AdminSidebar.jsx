@@ -6,6 +6,7 @@ const AdminSidebar = ({ activeTab, onTabClick }) => {
         { id: 'overview', label: 'Dashboard', icon: '📊', path: '/admin?tab=overview' },
         { id: 'users', label: 'User Control', icon: '👥', path: '/admin?tab=users' },
         { id: 'sessions', label: 'Sessions', icon: '📅', path: '/admin?tab=sessions' },
+        { id: 'attendance', label: 'Attendance', icon: '📝', path: '/admin?tab=attendance' },
         { id: 'history_link', label: 'My History', icon: '📜', path: '/admin/history' },
         { id: 'payments', label: 'Financials', icon: '💳', path: '/admin?tab=payments' },
         { id: 'ratings', label: 'Feedback', icon: '⭐', path: '/admin-feedback' },

@@ -27,5 +27,6 @@ router.put('/:id/rate', rateBooking);
 router.get('/session/:sessionId', getSessionDetails);
 router.patch('/session/:sessionId/join', require('../controllers/bookingController').joinSession);
 router.patch('/session/:sessionId/leave', require('../controllers/bookingController').leaveSession);
+router.get('/session/:sessionId/attendance', require('../controllers/bookingController').getSessionAttendanceReport);
 
 module.exports = router;

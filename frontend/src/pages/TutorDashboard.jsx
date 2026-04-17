@@ -20,6 +20,10 @@ const TutorDashboard = () => {
   const [wallet, setWallet] = useState({ balance: 0, pending: 0 });
   const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState(null);
+  const [attendanceReport, setAttendanceReport] = useState(null);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+
+
 
   useEffect(() => {
     fetchWallet();
@@ -40,6 +44,17 @@ const TutorDashboard = () => {
     }, 5000); 
     return () => clearInterval(interval);
   }, []);
+
+  const fetchAttendanceReport = async (sessionId) => {
+    try {
+      const { data } = await api.get(`/bookings/session/${sessionId}/attendance`);
+      setAttendanceReport(data);
+      setShowAttendanceModal(true);
+    } catch (error) {
+      console.error('Failed to fetch attendance report', error);
+    }
+  };
+
 
   const fetchWallet = async () => {
     try {
@@ -202,13 +217,20 @@ const TutorDashboard = () => {
         {trustProfile && (
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 bg-gray-800 p-6 rounded-[2rem] border border-gray-700 shadow-xl shadow-blue-50/50">
                 <div className="md:col-span-4 border-b md:border-b-0 md:border-r border-gray-700 pb-6 md:pb-0 md:pr-6 flex flex-col justify-center">
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Dynamic Access Profile</p>
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Tutor Trust Profile</p>
                     <h2 className={`text-4xl font-black mb-1 ${trustProfile.trustLevel === 'High' ? 'text-green-500' : trustProfile.trustLevel === 'Medium' ? 'text-teal-400' : 'text-red-500'}`}>
                         {trustProfile.trustLevel} Trust
                     </h2>
-                    <p className="text-gray-400 text-sm font-medium">
-                        Level: {trustProfile.trustLevel === 'High' ? 'Elite Contributor' : trustProfile.trustLevel === 'Medium' ? 'Standard Member' : 'Restricted Access'}
-                    </p>
+                    <div className="flex items-center gap-4 mt-2">
+                        <div className="text-center">
+                            <p className="text-[10px] font-black text-slate-500 uppercase">Sessions</p>
+                            <p className="text-lg font-bold text-teal-400">{trustProfile.stats?.attended || 0}</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-[10px] font-black text-slate-500 uppercase">Success</p>
+                            <p className="text-lg font-bold text-white">{trustProfile.stats?.attendanceRate || 0}%</p>
+                        </div>
+                    </div>
                 </div>
                 <div className="md:col-span-4 border-b md:border-b-0 md:border-r border-gray-700 py-6 md:py-0 md:px-6">
                     <div className="flex items-center gap-4 h-full">
@@ -216,8 +238,8 @@ const TutorDashboard = () => {
                             {trustProfile.trustLevel === 'High' ? '🚀' : trustProfile.trustLevel === 'Medium' ? '📅' : '⚠️'}
                         </div>
                         <div>
-                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Booking Capacity</p>
-                            <p className="text-2xl font-bold text-gray-300">{trustProfile.bookingLimit} Slots Max</p>
+                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Session Quota</p>
+                            <p className="text-2xl font-bold text-gray-300">{trustProfile.bookingLimit} Active Slots</p>
                             <div className="mt-1 flex gap-1">
                                 {[...Array(5)].map((_, i) => (
                                     <div key={i} className={`h-1 w-4 rounded-full ${i < trustProfile.bookingLimit ? 'bg-gradient-to-r from-teal-500 to-indigo-600' : 'bg-gray-800'}`}></div>
@@ -227,21 +249,16 @@ const TutorDashboard = () => {
                     </div>
                 </div>
                 <div className="md:col-span-4 pt-6 md:pt-0 md:pl-6 flex flex-col justify-center">
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Live Risk Insights</p>
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Tutor Badges</p>
                     <div className="flex flex-wrap gap-2">
                         {trustProfile.badges && trustProfile.badges.map(badge => (
                             <span key={badge} className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-100 animate-pulse">
                                 ✨ {badge}
                             </span>
                         ))}
-                        {trustProfile.trustLevel === 'Low' && (
-                            <span className="px-3 py-1 bg-red-50 text-red-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-red-100">
-                                Block Risk: High
-                            </span>
-                        )}
                         {trustProfile.stats && trustProfile.stats.attendanceRate > 90 && (
                             <span className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-green-100">
-                                Perfect Attendance
+                                Top Rated host
                             </span>
                         )}
                     </div>
@@ -286,6 +303,7 @@ const TutorDashboard = () => {
               setSelectedSessionId(sessionId);
               setIsQuizModalOpen(true);
             }} 
+            onViewAttendance={(sessionId) => fetchAttendanceReport(sessionId)}
           />
         </section>
 
@@ -295,6 +313,93 @@ const TutorDashboard = () => {
             sessionId={selectedSessionId}
             tutorId={user._id}
         />
+
+        {/* Attendance Modal */}
+        {showAttendanceModal && attendanceReport && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                <div className="bg-gray-800 w-full max-w-2xl rounded-3xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+                    <div className="p-6 border-b border-gray-700 flex justify-between items-center bg-gray-800/50">
+                        <div>
+                            <h3 className="text-2xl font-black flex items-center gap-3">
+                                📊 Session Attendance Report
+                            </h3>
+                            <p className="text-gray-400 text-sm font-medium mt-1">Real-time participation tracking logs</p>
+                        </div>
+                        <button onClick={() => setShowAttendanceModal(false)} className="text-gray-400 hover:text-white text-2xl">&times;</button>
+                    </div>
+                    <div className="p-6 overflow-y-auto flex-1 space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-teal-500/10 p-4 rounded-2xl border border-teal-500/20">
+                                <p className="text-xs font-black text-teal-500 uppercase tracking-widest mb-1">Attended</p>
+                                <p className="text-3xl font-black text-white">{attendanceReport.attended.length}</p>
+                            </div>
+                            <div className="bg-red-500/10 p-4 rounded-2xl border border-red-500/20">
+                                <p className="text-xs font-black text-red-500 uppercase tracking-widest mb-1">Missed</p>
+                                <p className="text-3xl font-black text-white">{attendanceReport.missed.length}</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Attended Students</h4>
+                            {attendanceReport.attended.length === 0 ? (
+                                <p className="text-sm text-gray-500 italic">No students attended this session yet.</p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {attendanceReport.attended.map(s => (
+                                        <div key={s._id} className="p-4 bg-gray-900/50 rounded-xl border border-green-500/20 flex justify-between items-center">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-green-500/20 text-green-400 flex items-center justify-center font-bold text-xs uppercase">
+                                                    {s.firstName[0]}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-gray-300">{s.firstName} {s.lastName}</p>
+                                                    <p className="text-[10px] text-gray-500 tracking-tighter">{s.email}</p>
+                                                </div>
+                                            </div>
+                                            <span className="px-2 py-1 bg-green-500/10 text-green-400 rounded-lg text-[10px] font-black uppercase">Verified</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest pt-4">Missed Students</h4>
+                            {attendanceReport.missed.length === 0 ? (
+                                <p className="text-sm text-gray-500 italic">No students missed this session.</p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {attendanceReport.missed.map(s => (
+                                        <div key={s._id} className="p-4 bg-gray-900/50 rounded-xl border border-red-500/20 flex justify-between items-center">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center font-bold text-xs uppercase">
+                                                    {s.firstName[0]}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-gray-300">{s.firstName} {s.lastName}</p>
+                                                    <p className="text-[10px] text-gray-500 tracking-tighter">{s.email}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="px-2 py-1 bg-red-500/10 text-red-400 rounded-lg text-[10px] font-black uppercase inline-block">Missed</span>
+                                                <p className="text-[10px] text-gray-500 mt-1">Trust Impacted</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="p-6 border-t border-gray-700 bg-gray-900/50 text-right">
+                        <button
+                            onClick={() => setShowAttendanceModal(false)}
+                            className="px-8 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all border border-gray-700"
+                        >
+                            Close Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
 
         {/* Student Feedback Section */}
         <section className="bg-gray-800 rounded-3xl p-6 md:p-8 border border-gray-700 shadow-xl">

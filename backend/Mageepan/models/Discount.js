@@ -1,35 +1,31 @@
 const mongoose = require('mongoose');
 
-const DiscountSchema = new mongoose.Schema({
+const discountSchema = new mongoose.Schema({
     student: {
-        type: mongoose.Schema.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
     },
     tutor: {
-        type: mongoose.Schema.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
     },
     percentage: {
         type: Number,
         required: true,
-        min: 0,
-        max: 0.10 // Max 10%
+        default: 0.1 // 10% discount
     },
     isUsed: {
         type: Boolean,
         default: false
     },
-    sourceSession: {
-        type: mongoose.Schema.ObjectId,
-        ref: 'Session',
-        required: true
-    },
-    createdAt: {
+    validUntil: {
         type: Date,
-        default: Date.now
+        default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
     }
+}, {
+    timestamps: true
 });
 
-module.exports = mongoose.model('Discount', DiscountSchema);
+module.exports = mongoose.model('Discount', discountSchema);

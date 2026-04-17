@@ -466,9 +466,20 @@ const StudentDashboard = () => {
                     <h2 className={`text-4xl font-black mb-1 ${trustProfile.trustLevel === 'High' ? 'text-green-500' : trustProfile.trustLevel === 'Medium' ? 'text-teal-400' : 'text-red-500'}`}>
                         {trustProfile.trustLevel} Trust
                     </h2>
-                    <p className="text-gray-400 text-sm font-medium">
-                        Level: {trustProfile.trustLevel === 'High' ? 'Elite Contributor' : trustProfile.trustLevel === 'Medium' ? 'Standard Member' : 'Restricted Access'}
-                    </p>
+                    <div className="flex items-center gap-4 mt-2">
+                        <div className="text-center">
+                            <p className="text-[10px] font-black text-slate-500 uppercase">Attended</p>
+                            <p className="text-lg font-bold text-teal-400">{trustProfile.stats?.attended || 0}</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-[10px] font-black text-slate-500 uppercase">Missed</p>
+                            <p className="text-lg font-bold text-red-400">{trustProfile.stats?.missed || 0}</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-[10px] font-black text-slate-500 uppercase">Rate</p>
+                            <p className="text-lg font-bold text-white">{trustProfile.stats?.attendanceRate || 0}%</p>
+                        </div>
+                    </div>
                 </div>
                 <div className="md:col-span-4 border-b md:border-b-0 md:border-r border-gray-700 py-6 md:py-0 md:px-6">
                     <div className="flex items-center gap-4 h-full">
@@ -487,23 +498,16 @@ const StudentDashboard = () => {
                     </div>
                 </div>
                 <div className="md:col-span-4 pt-6 md:pt-0 md:pl-6 flex flex-col justify-center">
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Live Risk Insights</p>
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Participation Rewards</p>
                     <div className="flex flex-wrap gap-2">
                         {trustProfile.badges && trustProfile.badges.map(badge => (
-                            <span key={badge} className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-amber-100 animate-pulse">
+                            <span key={badge} className="px-3 py-1 bg-teal-500/10 text-teal-400 rounded-full text-[10px] font-black uppercase tracking-wider border border-teal-500/20">
                                 ✨ {badge}
                             </span>
                         ))}
-                        {trustProfile.trustLevel === 'Low' && (
-                            <span className="px-3 py-1 bg-red-50 text-red-500 rounded-full text-[10px] font-black uppercase tracking-wider border border-red-100">
-                                Block Risk: High
-                            </span>
-                        )}
-                        {trustProfile.stats && trustProfile.stats.attendanceRate > 90 && (
-                            <span className="px-3 py-1 bg-green-50 text-green-600 rounded-full text-[10px] font-black uppercase tracking-wider border border-green-100">
-                                Perfect Attendance
-                            </span>
-                        )}
+                        <span className="px-3 py-1 bg-gray-900 text-gray-400 rounded-full text-[10px] font-black uppercase tracking-wider border border-gray-700">
+                            Cancellations: {trustProfile.stats?.cancellations || 0}
+                        </span>
                     </div>
                 </div>
             </div>

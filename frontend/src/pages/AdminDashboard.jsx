@@ -13,7 +13,9 @@ const AdminDashboard = () => {
     const [users, setUsers] = useState([]);
     const [sessions, setSessions] = useState([]);
     const [transactions, setTransactions] = useState([]);
+    const [attendanceReport, setAttendanceReport] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [loadingReports, setLoadingReports] = useState(false);
 
     useEffect(() => {
         const tab = getTabFromUrl(location.search);
@@ -43,12 +45,35 @@ const AdminDashboard = () => {
             setUsers(usersRes.data.users);
             setSessions(sessionsRes.data.sessions);
             setTransactions(txRes.data.transactions);
+            
+            // If on attendance tab, fetch that too
+            if (activeTab === 'attendance') {
+                fetchAttendanceReports();
+            }
         } catch (error) {
             toast.error('Failed to fetch admin data');
         } finally {
             setLoading(false);
         }
     };
+
+    const fetchAttendanceReports = async () => {
+        try {
+            setLoadingReports(true);
+            const { data } = await api.get('/admin/reports/attendance');
+            setAttendanceReport(data);
+        } catch (error) {
+            console.error('Failed to fetch attendance reports', error);
+        } finally {
+            setLoadingReports(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'attendance' && !attendanceReport) {
+            fetchAttendanceReports();
+        }
+    }, [activeTab]);
 
     const handleBlockUser = async (userId, isBlocked) => {
         try {
@@ -438,6 +463,231 @@ const AdminDashboard = () => {
                         <h3 className="text-xl font-black text-gray-300 uppercase tracking-tighter">Redirecting Header</h3>
                         <p className="text-slate-400 font-medium text-sm">Please utilize the specialized Feedback Dashboard in the sidebar for full control.</p>
                         <Link to="/admin-feedback" className="mt-6 px-8 py-3 bg-gradient-to-r from-teal-500 to-indigo-600 text-white rounded-2xl font-bold hover:shadow-2xl transition">Advance to Feedback Dashboard →</Link>
+                    </div>
+                )}
+
+                {/* Attendance Tab */}
+                {activeTab === 'attendance' && (
+                    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        {loadingReports ? (
+                             <div className="flex flex-col items-center justify-center py-20">
+                                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500 mb-4"></div>
+                                <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Aggregating Global Metrics...</p>
+                             </div>
+                        ) : attendanceReport && (
+                            <>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                    <div className="bg-gray-800 p-8 rounded-[2rem] border border-slate-100 shadow-xl">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Validated Slots</p>
+                                        <p className="text-4xl font-black text-gray-300">{attendanceReport.totalSessions}</p>
+                                        <div className="h-1.5 w-full bg-slate-900 mt-4 rounded-full overflow-hidden">
+                                            <div className="h-full bg-teal-500 w-[65%]"></div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-gray-800 p-8 rounded-[2rem] border border-slate-100 shadow-xl">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Global Completion Rate</p>
+                                        <p className="text-4xl font-black text-indigo-400">{attendanceReport.globalAttendanceRate}%</p>
+                                        <div className="h-1.5 w-full bg-slate-900 mt-4 rounded-full overflow-hidden">
+                                            <div className="h-full bg-indigo-500" style={{ width: `${attendanceReport.globalAttendanceRate}%` }}></div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-gray-800 p-8 rounded-[2rem] border border-slate-100 shadow-xl">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">User Engagement</p>
+                                        <div className="flex items-end gap-1 mb-1">
+                                            <p className="text-4xl font-black text-emerald-400">{attendanceReport.activeUsers}</p>
+                                            <p className="text-xs font-bold text-slate-500 mb-1">/ {attendanceReport.activeUsers + attendanceReport.inactiveUsers} Active</p>
+                                        </div>
+                                        <div className="flex gap-1 h-1.5 w-full bg-slate-900 mt-4 rounded-full overflow-hidden">
+                                            <div className="h-full bg-emerald-500" style={{ width: `${(attendanceReport.activeUsers / (attendanceReport.activeUsers + attendanceReport.inactiveUsers || 1)) * 100}%` }}></div>
+                                            <div className="h-full bg-gray-700" style={{ width: `${(attendanceReport.inactiveUsers / (attendanceReport.activeUsers + attendanceReport.inactiveUsers || 1)) * 100}%` }}></div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-gray-800 p-8 rounded-[2rem] border border-red-100 shadow-xl relative overflow-hidden group">
+                                         <div className="absolute -right-4 -bottom-4 text-6xl opacity-10 group-hover:scale-110 transition">⚠️</div>
+                                        <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1">High Risk Students</p>
+                                        <p className="text-4xl font-black text-red-500">{attendanceReport.lowAttendanceUsers.length}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 mt-2 italic">Requires manual intervention</p>
+                                    </div>
+                                </div>
+
+                                {/* Full System Reports: Trends */}
+                                <div className="bg-gray-800 p-8 rounded-[2.5rem] border border-slate-100 shadow-xl">
+                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                                        <div>
+                                            <h3 className="text-xl font-black flex items-center gap-3">
+                                                <span className="w-2 h-6 bg-teal-500 rounded-full"></span>
+                                                Full System Attendance Trends
+                                            </h3>
+                                            <p className="text-xs text-slate-500 font-bold uppercase mt-1">Monthly participation variation analytics</p>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-3 h-3 bg-teal-500 rounded-full"></span>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase">Attended</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-3 h-3 bg-rose-500 rounded-full"></span>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase">Missed</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-6 gap-4 h-64 items-end px-4 border-b border-gray-700 pb-2">
+                                        {attendanceReport.trends.map((item, idx) => {
+                                            const maxSessions = Math.max(...attendanceReport.trends.map(t => t.attended + t.missed)) || 1;
+                                            return (
+                                                <div key={idx} className="flex flex-col items-center gap-2 group h-full justify-end">
+                                                    <div className="flex gap-1 items-end h-[80%] w-full max-w-[40px]">
+                                                        <div 
+                                                            className="flex-1 bg-gradient-to-t from-teal-600 to-teal-400 rounded-t-md transition-all duration-500 group-hover:opacity-80"
+                                                            style={{ height: `${(item.attended / maxSessions) * 100}%` }}
+                                                        ></div>
+                                                        <div 
+                                                            className="flex-1 bg-gradient-to-t from-rose-600 to-rose-400 rounded-t-md transition-all duration-500 group-hover:opacity-80"
+                                                            style={{ height: `${(item.missed / maxSessions) * 100}%` }}
+                                                        ></div>
+                                                    </div>
+                                                    <p className="text-[10px] font-black text-slate-500 uppercase">{item.month}</p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                    <div className="bg-gray-800 p-8 rounded-[2.5rem] border border-slate-100 shadow-xl">
+                                        <h3 className="text-xl font-black mb-6 flex items-center gap-3">
+                                            <span className="w-2 h-6 bg-red-500 rounded-full"></span>
+                                            High Risk Monitor {'(< 50%)'}
+                                        </h3>
+                                        <div className="space-y-4">
+                                            {attendanceReport.lowAttendanceUsers.length === 0 ? (
+                                                <p className="text-center py-10 text-slate-400 font-medium italic">All students maintain healthy attendance levels.</p>
+                                            ) : (
+                                                attendanceReport.lowAttendanceUsers.map(u => (
+                                                    <div key={u._id} className="flex items-center justify-between p-4 bg-red-500/5 rounded-2xl border border-red-100/50 hover:bg-red-500/10 transition">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-10 h-10 rounded-xl bg-red-500/20 text-red-500 flex items-center justify-center font-bold">
+                                                                {u.firstName ? u.firstName[0] : 'U'}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-bold text-gray-300 leading-none mb-1">{u.firstName} {u.lastName}</p>
+                                                                <p className="text-xs text-slate-500 font-black tracking-tighter uppercase">{u.email}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-lg font-black text-red-500">{u.attendanceRate}%</p>
+                                                            <p className="text-[9px] font-bold text-slate-400 uppercase">Rate</p>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-gray-800 p-8 rounded-[2.5rem] border border-slate-100 shadow-xl">
+                                        <h3 className="text-xl font-black mb-6 flex items-center gap-3">
+                                            <span className="w-2 h-6 bg-amber-500 rounded-full"></span>
+                                            Integrity {'&'} Misuse Behavior
+                                        </h3>
+                                        <div className="space-y-4">
+                                            {attendanceReport.misuseBehavior.length === 0 ? (
+                                                <p className="text-center py-10 text-slate-400 font-medium italic">No suspicious behavior patterns detected.</p>
+                                            ) : (
+                                                attendanceReport.misuseBehavior.map(u => (
+                                                    <div key={u._id} className="flex items-center justify-between p-4 bg-gray-900 rounded-2xl border border-slate-100 hover:border-amber-400 transition">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center font-bold">
+                                                                {u.firstName ? u.firstName[0] : 'U'}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-bold text-gray-300 leading-none mb-1">{u.firstName} {u.lastName}</p>
+                                                                <p className="text-[10px] text-slate-500 font-black tracking-tighter uppercase">Abuse Patterns Detected</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex gap-3">
+                                                           {u.missedSessions > 3 && (
+                                                                <div className="text-center px-2 py-1 bg-red-500/10 rounded-lg">
+                                                                    <p className="text-xs font-black text-red-500">{u.missedSessions}</p>
+                                                                    <p className="text-[8px] font-bold text-slate-400 uppercase">Missed</p>
+                                                                </div>
+                                                           )}
+                                                            <div className="text-center px-2 py-1 bg-gray-900 rounded-lg border border-gray-700">
+                                                                    <p className="text-xs font-black text-gray-400">{u.trustScore}%</p>
+                                                                    <p className="text-[8px] font-bold text-slate-400 uppercase">Trust</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Session-wise Attendance Table */}
+                                <div className="bg-gray-800 rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden">
+                                     <div className="p-8 border-b border-gray-700 bg-gray-800/50">
+                                        <h3 className="text-xl font-black flex items-center gap-3">
+                                            <span className="w-2 h-6 bg-indigo-500 rounded-full"></span>
+                                            Session-wise Attendance Report
+                                        </h3>
+                                        <p className="text-xs text-slate-500 font-bold uppercase mt-1">Complete system-wide student participation ledger</p>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="bg-gray-900 shadow-sm border-b border-gray-700">
+                                                    <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest">Student</th>
+                                                    <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Attended</th>
+                                                    <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Missed</th>
+                                                    <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Rating</th>
+                                                    <th className="px-8 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-700/50">
+                                                {attendanceReport.allStudentAttendance.map((student, idx) => (
+                                                    <tr key={student._id || idx} className="group hover:bg-gray-700/30 transition-colors">
+                                                        <td className="px-8 py-6">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-black group-hover:scale-110 transition shadow-inner">
+                                                                    {student.name ? student.name[0] : 'S'}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="font-bold text-gray-200">{student.name}</p>
+                                                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-tighter">{student.email}</p>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-8 py-6 text-center">
+                                                            <span className="text-sm font-black text-emerald-400">{student.attended}</span>
+                                                            <p className="text-[8px] font-bold text-slate-500 uppercase">Sessions</p>
+                                                        </td>
+                                                        <td className="px-8 py-6 text-center">
+                                                            <span className="text-sm font-black text-rose-400">{student.missed}</span>
+                                                            <p className="text-[8px] font-bold text-slate-500 uppercase">Missed</p>
+                                                        </td>
+                                                        <td className="px-8 py-6">
+                                                            <div className="flex flex-col items-center">
+                                                                <span className={`text-sm font-black ${Number(student.rate) > 80 ? 'text-teal-400' : Number(student.rate) > 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                                                                    {student.rate}%
+                                                                </span>
+                                                                <div className="w-16 h-1 mt-1 bg-gray-900 rounded-full overflow-hidden">
+                                                                    <div className={`h-full ${Number(student.rate) > 80 ? 'bg-teal-500' : Number(student.rate) > 50 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${student.rate}%` }}></div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-8 py-6 text-right">
+                                                            <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${student.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-gray-900 text-gray-500 border border-gray-700'}`}>
+                                                                {student.status}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 )}
             </main>

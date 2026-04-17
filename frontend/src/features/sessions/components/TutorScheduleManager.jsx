@@ -26,7 +26,8 @@ const parseSessionTime = (dateStr, timeStr) => {
   return d;
 };
 
-const TutorScheduleManager = ({ tutorId, onManageQuiz }) => {
+const TutorScheduleManager = ({ tutorId, onManageQuiz, onViewAttendance }) => {
+
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('sessions');
 
@@ -509,6 +510,12 @@ const TutorScheduleManager = ({ tutorId, onManageQuiz }) => {
                                                 >
                                                     📝 Manage Quiz
                                                 </button>
+                                                <button
+                                                    onClick={() => onViewAttendance(session._id)}
+                                                    className="px-4 py-2 bg-gray-800 border border-gray-700 hover:bg-gray-700 text-gray-300 text-sm font-bold rounded-lg transition-all text-center flex items-center justify-center gap-2"
+                                                >
+                                                    📊 Attendance Logs
+                                                </button>
                                             </div>
                                         </div>
                                     );
@@ -731,6 +738,14 @@ const TutorScheduleManager = ({ tutorId, onManageQuiz }) => {
                                                         >
                                                             Quiz
                                                         </button>
+                                                        {session.currentParticipants > 0 && (
+                                                            <button
+                                                                onClick={() => onViewAttendance(session._id)}
+                                                                className="flex-1 sm:flex-none bg-gray-700/50 hover:bg-gray-700 text-gray-300 px-4 py-2 rounded-lg border border-gray-600 transition-colors text-sm font-medium"
+                                                            >
+                                                                Logs
+                                                            </button>
+                                                        )}
                                                         <button
                                                             onClick={() => handleDeleteSession(session._id)}
                                                             className="flex-1 sm:flex-none opacity-100 hover:bg-red-500/20 text-red-400 hover:text-red-300 px-4 py-2 rounded-lg border border-red-900/50 transition-colors text-sm font-medium"

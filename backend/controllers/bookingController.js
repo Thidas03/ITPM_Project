@@ -275,6 +275,10 @@ exports.cancelBooking = async (req, res) => {
 
         try {
             const studentUser = await User.findById(req.user._id);
+            if (studentUser) {
+                studentUser.cancellations = (studentUser.cancellations || 0) + 1;
+                await studentUser.save();
+            }
             const studentName = studentUser ? studentUser.firstName : 'Unknown';
             const bookingDateStr = booking.bookingDate ? new Date(booking.bookingDate).toDateString() : 'a session';
             await Notification.create({
@@ -449,12 +453,30 @@ exports.leaveSession = async (req, res) => {
             } else {
                 student.missedSessions += 1;
             }
-            // Trust score is updated dynamically via methods in User model, 
-            // but we might want to trigger a recalculation or just let it be.
-            // The getTrustPercentage() method uses attendedSessions and missedSessions.
-            // If the user wants "Trust score updated" explicitly as a field:
             student.trustScore = student.getTrustPercentage(); 
             await student.save();
+
+            // ATTENDANCE ALERT SYSTEM
+            const totalSessions = student.attendedSessions + student.missedSessions;
+            const attendanceRate = (student.attendedSessions / totalSessions) * 100;
+            if (totalSessions >= 3 && attendanceRate < 50) {
+                // Notify Student
+                await Notification.create({
+                    recipient: student._id,
+                    message: `CRITICAL: Your attendance rate has dropped to ${attendanceRate.toFixed(1)}%. Please attend more sessions to avoid account restriction.`,
+                    type: 'system'
+                });
+
+                // Notify Admin
+                const admins = await User.find({ role: 'Admin' });
+                for (const admin of admins) {
+                    await Notification.create({
+                        recipient: admin._id,
+                        message: `ALERT: Student ${student.firstName} ${student.lastName} (${student.email}) has low attendance (${attendanceRate.toFixed(1)}%).`,
+                        type: 'system'
+                    });
+                }
+            }
         }
 
         res.status(200).json({ 
@@ -470,4 +492,26 @@ exports.leaveSession = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// @desc    Get session-wise attendance for a host
+exports.getSessionAttendanceReport = async (req, res) => {
+    try {
+        const bookings = await Booking.find({ session: req.params.sessionId })
+            .populate('student', 'firstName lastName email attendedSessions missedSessions')
+            .sort('-attended');
+
+        const attended = bookings.filter(b => b.attendanceStatus === 'attended').map(b => b.student);
+        const missed = bookings.filter(b => b.attendanceStatus === 'missed').map(b => b.student);
+
+        res.json({
+            success: true,
+            attended,
+            missed,
+            total: bookings.length
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 

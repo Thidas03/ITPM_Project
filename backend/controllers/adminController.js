@@ -285,3 +285,79 @@ exports.getAllTransactions = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+// @desc    Get Detailed Attendance Reports for Admin
+// @route   GET /api/admin/reports/attendance
+// @access  Private/Admin
+exports.getAttendanceReports = async (req, res) => {
+    try {
+        const users = await User.find({ role: 'Student' });
+        const sessionsCount = await Session.countDocuments();
+        
+        // 1. Basic Stats
+        const activeCount = users.filter(u => u.isActive).length;
+        const lowAttendanceUsers = users.filter(u => {
+            const total = u.attendedSessions + u.missedSessions;
+            return total >= 3 && (u.attendedSessions / total) < 0.5;
+        }).map(u => ({
+            _id: u._id,
+            firstName: u.firstName,
+            lastName: u.lastName,
+            email: u.email,
+            attendanceRate: ((u.attendedSessions / (u.attendedSessions + u.missedSessions || 1)) * 100).toFixed(1)
+        }));
+
+        const misuseBehavior = users.filter(u => u.cancellations > 5 || u.misconductCount > 0 || u.missedSessions > 3)
+            .map(u => ({
+                _id: u._id,
+                firstName: u.firstName,
+                lastName: u.lastName,
+                missedSessions: u.missedSessions,
+                trustScore: u.getTrustPercentage()
+            }));
+
+        const attendedTotal = users.reduce((acc, u) => acc + u.attendedSessions, 0);
+        const missedTotal = users.reduce((acc, u) => acc + u.missedSessions, 0);
+
+        // 2. Full Student List (All Students)
+        const allStudentAttendance = users.map(u => {
+            const total = u.attendedSessions + u.missedSessions;
+            return {
+                _id: u._id,
+                name: `${u.firstName} ${u.lastName}`,
+                email: u.email,
+                attended: u.attendedSessions,
+                missed: u.missedSessions,
+                rate: total === 0 ? 100 : ((u.attendedSessions / total) * 100).toFixed(1),
+                status: u.isActive ? 'Active' : 'Inactive'
+            };
+        });
+
+        // 3. Simple Trends (Mocking last 6 months based on available data)
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const currentMonth = new Date().getMonth();
+        const trends = [];
+        for (let i = 5; i >= 0; i--) {
+            const mIdx = (currentMonth - i + 12) % 12;
+            trends.push({
+                month: months[mIdx],
+                attended: Math.floor(attendedTotal * (0.8 + Math.random() * 0.4) / 6), // Mocking trend data
+                missed: Math.floor(missedTotal * (0.8 + Math.random() * 0.4) / 6)
+            });
+        }
+
+        res.json({
+            totalSessions: sessionsCount,
+            globalAttendanceRate: ((attendedTotal / (attendedTotal + missedTotal || 1)) * 100).toFixed(1),
+            activeUsers: activeCount,
+            inactiveUsers: users.length - activeCount,
+            lowAttendanceUsers,
+            misuseBehavior,
+            allStudentAttendance,
+            trends
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+

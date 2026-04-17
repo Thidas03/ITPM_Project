@@ -19,6 +19,7 @@ router.use(admin);
 router.get('/stats', getDashboardStats);
 router.get('/history', getAdminHistory);
 router.get('/transactions', getAllTransactions);
+router.get('/reports/attendance', require('../controllers/adminController').getAttendanceReports);
 router.get('/users', getAllUsers);
 router.post('/users', createUser);
 router.put('/users/:id', updateUser);
