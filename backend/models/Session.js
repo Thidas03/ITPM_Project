@@ -29,14 +29,6 @@ const SessionSchema = new mongoose.Schema({
         enum: ['available', 'booked', 'active', 'completed', 'cancelled'],
         default: 'available'
     },
-    startedAt: {
-        type: Date,
-        default: null
-    },
-    endedAt: {
-        type: Date,
-        default: null
-    },
     password: {
         type: String,
         default: 'SECRET_PASS_123'

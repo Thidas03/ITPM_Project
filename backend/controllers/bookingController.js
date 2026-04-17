@@ -352,13 +352,13 @@ exports.getSessionDetails = async (req, res) => {
         }
 
         // 2) Scheduled session (Session model)
-        const session = await Session.findById(sessionId).select('tutor startTime endTime meetingLink password status startedAt endedAt');
+        const session = await Session.findById(sessionId).select('tutor startTime endTime meetingLink password');
         if (!session) return res.status(404).json({ success: false, error: 'Session not found' });
 
         const isTutor = session.tutor.toString() === userId.toString();
-        const booking = await Booking.findOne({ session: sessionId, student: userId });
+        const hasBooking = await Booking.findOne({ session: sessionId, student: userId }).select('_id');
 
-        if (!isTutor && !booking) {
+        if (!isTutor && !hasBooking) {
             return res.status(403).json({ success: false, error: 'Access Denied: You must book this session first.' });
         }
 
@@ -369,11 +369,7 @@ exports.getSessionDetails = async (req, res) => {
             meetingLink: session.meetingLink || ('https://meet.jit.si/' + session._id),
             password: session.password || '',
             status: session.status,
-            startedAt: session.startedAt,
-            endedAt: session.endedAt,
-            joinTime: booking ? booking.joinTime : null,
-            leaveTime: booking ? booking.leaveTime : null,
-            attendanceStatus: booking ? booking.attendanceStatus : null
+            type: session.type
         };
 
         return res.status(200).json({ success: true, data: sessionDetails });
@@ -382,131 +378,96 @@ exports.getSessionDetails = async (req, res) => {
     }
 };
 
-// JOIN SESSION (Student joins the session)
+// @desc    Student joins session
 exports.joinSession = async (req, res) => {
     try {
-        const booking = await Booking.findOne({ session: req.params.sessionId, student: req.user._id });
+        const { sessionId } = req.params;
+        const userId = req.user._id;
 
+        const booking = await Booking.findOne({ session: sessionId, student: userId });
         if (!booking) {
-            return res.status(404).json({ success: false, message: 'Booking not found for this session' });
+            return res.status(404).json({ success: false, message: 'Booking not found' });
         }
 
         if (booking.joinTime) {
-            return res.status(200).json({ success: true, message: 'Re-joined session', data: booking });
+            return res.status(200).json({ success: true, message: 'Already joined', data: booking });
         }
 
         booking.joinTime = new Date();
         await booking.save();
 
-        res.status(200).json({
-            success: true,
-            message: 'Joined session successfully',
-            data: booking
-        });
+        res.status(200).json({ success: true, message: 'Join time recorded', data: booking });
     } catch (error) {
-        res.status(400).json({
-            success: false,
-            message: error.message
-        });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
-// LEAVE SESSION (Student leaves the session and attendance is calculated)
+// @desc    Student leaves session & calculate attendance
 exports.leaveSession = async (req, res) => {
     try {
-        const booking = await Booking.findOne({ session: req.params.sessionId, student: req.user._id }).populate('session');
+        const { sessionId } = req.params;
+        const userId = req.user._id;
 
+        const booking = await Booking.findOne({ session: sessionId, student: userId }).populate('session');
         if (!booking) {
             return res.status(404).json({ success: false, message: 'Booking not found' });
         }
 
         if (!booking.joinTime) {
-            return res.status(400).json({ success: false, message: 'You never joined this session' });
+            return res.status(400).json({ success: false, message: 'Student never joined' });
         }
 
         if (booking.leaveTime) {
-            return res.status(200).json({ success: true, message: 'Already left session', data: booking });
+            return res.status(400).json({ success: false, message: 'Leave time already recorded' });
         }
 
         booking.leaveTime = new Date();
         
-        // --- Calculate Attendance ---
+        // Calculate Attendance
         const session = booking.session;
-        let sessionDurationMinutes = 0;
+        const parseTime = (timeStr) => {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
+        };
 
-        if (session.startTime && session.endTime) {
-            const [h1, m1] = session.startTime.split(':').map(Number);
-            const [h2, m2] = session.endTime.split(':').map(Number);
-            sessionDurationMinutes = (h2 * 60 + m2) - (h1 * 60 + m1);
-        } else {
-            // Fallback if session model doesn't have start/end times (unlikely here)
-            sessionDurationMinutes = 60; 
-        }
+        const totalSessionMinutes = parseTime(session.endTime) - parseTime(session.startTime);
+        const stayDurationMinutes = (booking.leaveTime - booking.joinTime) / (1000 * 60);
 
-        const studentStayDurationMs = booking.leaveTime - booking.joinTime;
-        const studentStayDurationMinutes = studentStayDurationMs / (1000 * 60);
+        const threshold = 0.7; // 70%
+        const isAttended = stayDurationMinutes >= (totalSessionMinutes * threshold);
 
-        const stayPercentage = (studentStayDurationMinutes / sessionDurationMinutes);
-
-        const student = await User.findById(req.user._id);
-
-        if (stayPercentage >= 0.70) {
-            booking.attendanceStatus = 'attended';
-            booking.attended = true;
-            student.attendedSessions += 1;
-        } else {
-            booking.attendanceStatus = 'missed';
-            booking.attended = false;
-            student.missedSessions += 1;
-        }
-
-        // Update Trust Score and Attendance %
-        student.trustScore = student.getTrustPercentage();
-        // Assuming there might be an attendancePercentage field, but if not we can just rely on the count.
-        // The user said "Attendance % updated", if there's no field we just rely on the dynamic calc.
-        // But let's check if User has that field. No, it calculates it dynamically.
-        
-        await student.save();
+        booking.attended = isAttended;
+        booking.attendanceStatus = isAttended ? 'attended' : 'missed';
+        booking.status = 'completed';
         await booking.save();
 
-        // --- Low Attendance Alert System ---
-        const totalSessions = student.attendedSessions + student.missedSessions;
-        const finalAttendanceRate = totalSessions > 0 ? (student.attendedSessions / totalSessions) * 100 : 0;
-
-        if (totalSessions >= 3 && finalAttendanceRate < 50) {
-            // Notify Student
-            await Notification.create({
-                recipient: student._id,
-                title: 'Low Attendance Alert',
-                message: `Warning: Your attendance rate has dropped to ${finalAttendanceRate.toFixed(1)}%. Please attend more sessions to maintain your trust score.`,
-                type: 'urgent'
-            });
-
-            // Notify Admin(s)
-            const admins = await User.find({ role: 'Admin' });
-            for (const admin of admins) {
-                await Notification.create({
-                    recipient: admin._id,
-                    title: 'Student Low Attendance Warning',
-                    message: `Student ${student.firstName} ${student.lastName} (${student.email}) has a critically low attendance rate of ${finalAttendanceRate.toFixed(1)}%.`,
-                    type: 'alert'
-                });
+        // Update User Stats
+        const student = await User.findById(userId);
+        if (student) {
+            if (isAttended) {
+                student.attendedSessions += 1;
+            } else {
+                student.missedSessions += 1;
             }
+            // Trust score is updated dynamically via methods in User model, 
+            // but we might want to trigger a recalculation or just let it be.
+            // The getTrustPercentage() method uses attendedSessions and missedSessions.
+            // If the user wants "Trust score updated" explicitly as a field:
+            student.trustScore = student.getTrustPercentage(); 
+            await student.save();
         }
 
-        res.status(200).json({
-            success: true,
-            message: `Left session. Attendance: ${booking.attendanceStatus}`,
+        res.status(200).json({ 
+            success: true, 
+            message: `Leave recorded. Attendance: ${booking.attendanceStatus}`,
             data: {
-                booking,
-                stayPercentage: (stayPercentage * 100).toFixed(2) + '%'
+                attended: isAttended,
+                stayDuration: Math.round(stayDurationMinutes),
+                totalDuration: totalSessionMinutes
             }
         });
     } catch (error) {
-        res.status(400).json({
-            success: false,
-            message: error.message
-        });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 

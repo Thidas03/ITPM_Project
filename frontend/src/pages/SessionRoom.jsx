@@ -13,6 +13,9 @@ const SessionRoom = () => {
     const [session, setSession] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isJoined, setIsJoined] = useState(false);
+    const [joining, setJoining] = useState(false);
+    
     const backPath =
         user?.role === 'Host' || user?.role === 'Tutor'
             ? '/dashboard/tutor'
@@ -20,68 +23,64 @@ const SessionRoom = () => {
                 ? '/dashboard/student'
                 : '/dashboard';
 
-    useEffect(() => {
-        const fetchSessionDetails = async () => {
-            try {
-                setLoading(true);
-                const response = await api.get(`/bookings/session/${sessionId}`);
-                setSession(response.data.data);
-            } catch (err) {
-                const message = err.response?.data?.error || 'Access Denied: You must book this session first.';
-                setError(message);
-                toast.error(message);
-            } finally {
-                setLoading(false);
-            }
-        };
+    const fetchSessionDetails = async () => {
+        try {
+            setLoading(true);
+            const response = await api.get(`/bookings/session/${sessionId}`);
+            setSession(response.data.data);
+        } catch (err) {
+            const message = err.response?.data?.error || 'Access Denied: You must book this session first.';
+            setError(message);
+            toast.error(message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    useEffect(() => {
         fetchSessionDetails();
     }, [sessionId]);
 
     const handleStartSession = async () => {
         try {
-            const response = await api.put(`/sessions/${sessionId}/start`);
-            setSession({ ...session, status: 'active', startedAt: response.data.data.startedAt });
+            await api.patch(`/sessions/${sessionId}/start`);
             toast.success('Session started! Students can now join.');
+            fetchSessionDetails();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to start session');
         }
     };
 
-    const handleEndSession = async () => {
-        try {
-            const response = await api.put(`/sessions/${sessionId}/end`);
-            setSession({ ...session, status: 'completed', endedAt: response.data.data.endedAt });
-            toast.success('Session ended.');
-        } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to end session');
-        }
-    };
-
     const handleJoinSession = async () => {
         try {
-            const response = await api.post(`/bookings/session/${sessionId}/join`);
-            setSession({ ...session, joinTime: response.data.data.joinTime });
-            toast.success('Joined session! Your attendance is being tracked.');
+            setJoining(true);
+            await api.patch(`/bookings/session/${sessionId}/join`);
+            setIsJoined(true);
+            toast.success('You have joined the session. Attendance is being tracked.');
+            // Automatically open Jitsi in new tab
+            window.open(session.meetingLink, '_blank');
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to join session');
+        } finally {
+            setJoining(false);
         }
     };
 
     const handleLeaveSession = async () => {
         try {
-            const response = await api.post(`/bookings/session/${sessionId}/leave`);
-            setSession({ 
-                ...session, 
-                leaveTime: response.data.data.booking.leaveTime,
-                attendanceStatus: response.data.data.booking.attendanceStatus 
-            });
-            toast.info(`You left the session. Attendance: ${response.data.data.booking.attendanceStatus}`);
+            const response = await api.patch(`/bookings/session/${sessionId}/leave`);
+            setIsJoined(false);
+            const { attended, stayDuration, totalDuration } = response.data.data;
+            if (attended) {
+                toast.success(`Session ended. You were marked as Attended! (Stayed ${stayDuration}/${totalDuration} mins)`);
+            } else {
+                toast.warning(`Session ended. Marked as Missed. (Stayed ${stayDuration} mins, need 70% of ${totalDuration} mins)`);
+            }
+            navigate(backPath);
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to leave session');
+            toast.error(err.response?.data?.message || 'Failed to record leave time');
         }
     };
-
 
     if (loading) {
         return (
@@ -126,8 +125,19 @@ const SessionRoom = () => {
                                 <Video size={26} className="text-white" />
                             </div>
                             <div>
-                                <h1 className="text-2xl md:text-3xl font-extrabold text-white">Join Your Session</h1>
-                                <p className="text-teal-500/20 bg-white/10 px-3 py-1 rounded-full text-sm inline-block mt-2 font-bold text-white">Confirmed Booking</p>
+                                <h1 className="text-2xl md:text-3xl font-extrabold text-white">
+                                    {user?.role === 'Host' || user?.role === 'Tutor' ? 'Manage Session' : 'Join Your Session'}
+                                </h1>
+                                <div className="flex gap-2 items-center mt-2">
+                                    <p className="text-teal-500/20 bg-white/10 px-3 py-1 rounded-full text-xs font-bold text-white uppercase tracking-wider">
+                                        {session.status}
+                                    </p>
+                                    {isJoined && (
+                                        <p className="bg-green-500/20 px-3 py-1 rounded-full text-xs font-bold text-green-400 border border-green-500/30">
+                                            LIVE • JOINED
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -151,101 +161,79 @@ const SessionRoom = () => {
                         </div>
 
                         <div className="pt-5 border-t border-gray-700">
-                            <h3 className="text-base font-bold text-white mb-3">
-                                {user?.role === 'Host' || user?.role === 'Tutor' ? 'Host Controls' : 'Attendance'}
-                            </h3>
+                            <h3 className="text-base font-bold text-white mb-3">Launch Session</h3>
                             
-                            {/* Host Controls */}
                             {(user?.role === 'Host' || user?.role === 'Tutor') && (
-                                <div className="space-y-4">
-                                    {session.status !== 'active' && session.status !== 'completed' && (
-                                        <button
+                                <>
+                                    {session.status !== 'active' ? (
+                                        <button 
                                             onClick={handleStartSession}
-                                            className="w-full py-4 bg-green-600 hover:bg-green-500 text-white font-black text-lg rounded-2xl shadow-xl transition-all transform hover:-translate-y-1"
+                                            className="block w-full text-center py-4 bg-teal-500 hover:bg-teal-400 text-white font-black text-lg rounded-2xl shadow-xl transition-all transform hover:-translate-y-1"
                                         >
-                                            Start Session
+                                            Start Session (Mark Active)
                                         </button>
-                                    )}
-                                    {session.status === 'active' && (
-                                        <button
-                                            onClick={handleEndSession}
-                                            className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-black text-lg rounded-2xl shadow-xl transition-all transform hover:-translate-y-1"
+                                    ) : (
+                                        <a 
+                                            href={session.meetingLink}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="block w-full text-center py-4 bg-gradient-to-r from-teal-500 to-indigo-600 hover:from-teal-400 hover:to-indigo-500 text-white font-black text-lg rounded-2xl shadow-xl transition-all transform hover:-translate-y-1"
                                         >
-                                            End Session
-                                        </button>
+                                            Open Jitsi Meet
+                                        </a>
                                     )}
-                                    {session.status === 'completed' && (
-                                        <div className="p-4 bg-gray-900/50 rounded-2xl border border-gray-700 text-center">
-                                            <p className="text-gray-400 font-bold">Session Completed</p>
-                                        </div>
-                                    )}
-                                </div>
+                                </>
                             )}
 
-                            {/* Student Controls */}
-                            {user?.role === 'Student' && (
-                                <div className="space-y-4">
-                                    {session.status !== 'active' && !session.joinTime && (
-                                        <div className="p-4 bg-gray-900/50 rounded-2xl border border-gray-700 text-center">
-                                            <p className="text-gray-400 italic font-medium">Waiting for host to start the session...</p>
+                            {(user?.role === 'Student') && (
+                                <>
+                                    {session.status !== 'active' ? (
+                                        <div className="p-4 bg-gray-900/50 border border-yellow-500/20 rounded-2xl text-center">
+                                            <p className="text-yellow-500 font-bold flex items-center justify-center gap-2">
+                                                <Clock size={18} /> Waiting for Host to start session...
+                                            </p>
                                         </div>
+                                    ) : (
+                                        <>
+                                            {!isJoined ? (
+                                                <button 
+                                                    onClick={handleJoinSession}
+                                                    disabled={joining}
+                                                    className="block w-full text-center py-4 bg-gradient-to-r from-teal-500 to-indigo-600 hover:from-teal-400 hover:to-indigo-500 text-white font-black text-lg rounded-2xl shadow-xl transition-all transform hover:-translate-y-1 disabled:opacity-50"
+                                                >
+                                                    {joining ? 'Joining...' : 'Join Session'}
+                                                </button>
+                                            ) : (
+                                                <div className="space-y-4">
+                                                    <a 
+                                                        href={session.meetingLink}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="block w-full text-center py-4 bg-teal-600 hover:bg-teal-500 text-white font-black text-lg rounded-2xl shadow-xl transition-all transform hover:-translate-y-1"
+                                                    >
+                                                        Re-open Jitsi Meet
+                                                    </a>
+                                                    <button 
+                                                        onClick={handleLeaveSession}
+                                                        className="block w-full text-center py-4 bg-red-500/20 hover:bg-red-500/30 text-red-500 border border-red-500/30 font-bold text-lg rounded-2xl transition-all"
+                                                    >
+                                                        Leave & End Session
+                                                    </button>
+                                                    <p className="text-center text-xs text-gray-500 italic">
+                                                        * Attendance is only recorded when you click "Leave & End Session"
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </>
                                     )}
-
-                                    {session.status === 'active' && !session.joinTime && (
-                                        <button
-                                            onClick={handleJoinSession}
-                                            className="w-full py-4 bg-teal-600 hover:bg-teal-500 text-white font-black text-lg rounded-2xl shadow-xl transition-all transform hover:-translate-y-1"
-                                        >
-                                            Join Session
-                                        </button>
-                                    )}
-
-                                    {session.joinTime && !session.leaveTime && (
-                                        <div className="space-y-4">
-                                            <div className="p-4 bg-teal-900/20 rounded-2xl border border-teal-500/30 text-center">
-                                                <p className="text-teal-400 font-bold">You are in the session</p>
-                                                <p className="text-xs text-teal-500/60 mt-1 uppercase tracking-widest">Attendance is being tracked</p>
-                                            </div>
-                                            <button
-                                                onClick={handleLeaveSession}
-                                                className="w-full py-4 bg-gray-700 hover:bg-gray-600 text-white font-bold text-lg rounded-2xl shadow-lg transition-all"
-                                            >
-                                                Leave Session
-                                            </button>
-                                        </div>
-                                    )}
-
-                                    {session.leaveTime && (
-                                        <div className={`p-4 rounded-2xl border text-center ${
-                                            session.attendanceStatus === 'attended' 
-                                            ? 'bg-green-900/20 border-green-500/30 text-green-400' 
-                                            : 'bg-red-900/20 border-red-500/30 text-red-400'
-                                        }`}>
-                                            <p className="font-black text-xl uppercase tracking-wider">{session.attendanceStatus}</p>
-                                            <p className="text-xs mt-1 opacity-60">Based on time spent in session (70% threshold)</p>
-                                        </div>
-                                    )}
-                                </div>
+                                </>
                             )}
 
-                            <div className="mt-8 pt-5 border-t border-gray-700">
-                                <h3 className="text-base font-bold text-white mb-3">Launch Meeting</h3>
-                                <a 
-                                    href={session.meetingLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`block w-full text-center py-4 bg-gradient-to-r from-teal-500 to-indigo-600 hover:from-teal-400 hover:to-indigo-500 text-white font-black text-lg rounded-2xl shadow-xl transition-all transform hover:-translate-y-1 ${
-                                        user?.role === 'Student' && !session.joinTime ? 'opacity-50 pointer-events-none' : ''
-                                    }`}
-                                >
-                                    Open Jitsi Meet
-                                </a>
-                                {user?.role === 'Student' && !session.joinTime && (
-                                    <p className="text-center text-red-500 mt-2 text-xs font-bold">
-                                        Please click "Join Session" to enable the meeting link and track attendance.
-                                    </p>
-                                )}
-                            </div>
+                            {user?.role === 'Student' && session.status !== 'active' && (
+                                <p className="text-center text-gray-500 mt-4 text-sm">
+                                    The "Join Session" button will appear once your tutor starts the session.
+                                </p>
+                            )}
                         </div>
 
                         <div className="pt-5 border-t border-gray-700">
@@ -260,3 +248,4 @@ const SessionRoom = () => {
 };
 
 export default SessionRoom;
+

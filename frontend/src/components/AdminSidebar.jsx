@@ -8,7 +8,6 @@ const AdminSidebar = ({ activeTab, onTabClick }) => {
         { id: 'sessions', label: 'Sessions', icon: '📅', path: '/admin?tab=sessions' },
         { id: 'history_link', label: 'My History', icon: '📜', path: '/admin/history' },
         { id: 'payments', label: 'Financials', icon: '💳', path: '/admin?tab=payments' },
-        { id: 'attendance', label: 'Attendance', icon: '✅', path: '/admin?tab=attendance' },
         { id: 'ratings', label: 'Feedback', icon: '⭐', path: '/admin-feedback' },
     ];
 

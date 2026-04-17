@@ -9,9 +9,7 @@ const {
     getRecommendedSlot,
     bookSession,
     getSessionParticipants,
-    cancelSession,
-    startSession,
-    endSession
+    cancelSession
 } = require('../controllers/sessionController');
 
 router.post('/', createSession);
@@ -20,8 +18,7 @@ router.get('/tutor/:tutorId/recommend', getRecommendedSlot);
 router.put('/:sessionId', updateSession);
 router.put('/:sessionId/book', bookSession);
 router.put('/:sessionId/cancel', cancelSession);
-router.put('/:sessionId/start', startSession);
-router.put('/:sessionId/end', endSession);
+router.patch('/:sessionId/start', require('../controllers/sessionController').startSession);
 router.get('/:sessionId/participants', getSessionParticipants);
 router.delete('/:sessionId', deleteSession);
 
