@@ -40,6 +40,14 @@ const BookingSchema = new mongoose.Schema({
         enum: ['attended', 'missed', 'none'],
         default: 'none'
     },
+    joinTime: {
+        type: Date,
+        default: null
+    },
+    leaveTime: {
+        type: Date,
+        default: null
+    },
     rating: {
         type: Number,
         min: 1,

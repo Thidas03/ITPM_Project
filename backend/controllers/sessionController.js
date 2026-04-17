@@ -299,7 +299,7 @@ exports.bookSession = async (req, res) => {
 exports.getSessionParticipants = async (req, res) => {
     try {
         const bookings = await Booking.find({ session: req.params.sessionId })
-            .populate('student', 'name email')
+            .populate('student', 'firstName lastName email profilePicture')
             .sort({ createdAt: 1 });
 
         res.status(200).json({
@@ -372,3 +372,67 @@ exports.cancelSession = async (req, res) => {
         });
     }
 };
+
+// START SESSION (Host starts the session)
+exports.startSession = async (req, res) => {
+    try {
+        const session = await Session.findById(req.params.sessionId);
+
+        if (!session) {
+            return res.status(404).json({ success: false, message: 'Session not found' });
+        }
+
+        if (session.status === 'active') {
+            return res.status(400).json({ success: false, message: 'Session is already active' });
+        }
+
+        session.status = 'active';
+        session.startedAt = new Date();
+        await session.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Session started successfully',
+            data: session
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// END SESSION (Host ends the session)
+exports.endSession = async (req, res) => {
+    try {
+        const session = await Session.findById(req.params.sessionId);
+
+        if (!session) {
+            return res.status(404).json({ success: false, message: 'Session not found' });
+        }
+
+        if (session.status === 'completed') {
+            return res.status(400).json({ success: false, message: 'Session is already completed' });
+        }
+
+        session.status = 'completed';
+        session.endedAt = new Date();
+        await session.save();
+
+        // Optional: Trigger attendance calculation for all students who hasn't left yet?
+        // But the prompt says calculation happens when student leaves.
+
+        res.status(200).json({
+            success: true,
+            message: 'Session ended successfully',
+            data: session
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+

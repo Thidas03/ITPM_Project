@@ -772,13 +772,30 @@ const TutorScheduleManager = ({ tutorId, onManageQuiz }) => {
                                     <div className="space-y-3">
                                         {sessionParticipants.map(participant => (
                                             <div key={participant._id} className="p-4 bg-gray-900 rounded-xl border border-gray-700 flex justify-between items-center">
-                                                <div>
-                                                    <div className="font-bold text-gray-100">{participant.student?.name}</div>
-                                                    <div className="text-xs text-gray-500">{participant.student?.email}</div>
+                                                <div className="flex items-center gap-3">
+                                                    {participant.student?.profilePicture ? (
+                                                        <img src={participant.student.profilePicture} alt="Avatar" className="w-10 h-10 rounded-full border border-gray-700" />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-full bg-teal-500/20 flex items-center justify-center text-teal-500 font-bold uppercase">
+                                                            {participant.student?.firstName?.charAt(0)}
+                                                        </div>
+                                                    )}
+                                                    <div>
+                                                        <div className="font-bold text-gray-100">{participant.student?.firstName} {participant.student?.lastName}</div>
+                                                        <div className="text-xs text-gray-500">{participant.student?.email}</div>
+                                                    </div>
                                                 </div>
-                                                <div className="text-xs text-gray-500 text-right">
-                                                    Booked at:<br />
-                                                    {new Date(participant.createdAt).toLocaleString()}
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded border ${
+                                                        participant.attendanceStatus === 'attended' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
+                                                        participant.attendanceStatus === 'missed' ? 'bg-red-500/10 text-red-400 border-red-500/20' : 
+                                                        'bg-gray-500/10 text-gray-400 border-gray-500/20'
+                                                    }`}>
+                                                        {participant.attendanceStatus || 'Not Join'}
+                                                    </span>
+                                                    <div className="text-[10px] text-gray-600">
+                                                        {new Date(participant.createdAt).toLocaleDateString()}
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}

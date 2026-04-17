@@ -26,8 +26,16 @@ const SessionSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['available', 'booked', 'completed', 'cancelled'],
+        enum: ['available', 'booked', 'active', 'completed', 'cancelled'],
         default: 'available'
+    },
+    startedAt: {
+        type: Date,
+        default: null
+    },
+    endedAt: {
+        type: Date,
+        default: null
     },
     password: {
         type: String,

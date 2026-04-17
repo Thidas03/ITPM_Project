@@ -352,13 +352,13 @@ exports.getSessionDetails = async (req, res) => {
         }
 
         // 2) Scheduled session (Session model)
-        const session = await Session.findById(sessionId).select('tutor startTime endTime meetingLink password');
+        const session = await Session.findById(sessionId).select('tutor startTime endTime meetingLink password status startedAt endedAt');
         if (!session) return res.status(404).json({ success: false, error: 'Session not found' });
 
         const isTutor = session.tutor.toString() === userId.toString();
-        const hasBooking = await Booking.findOne({ session: sessionId, student: userId }).select('_id');
+        const booking = await Booking.findOne({ session: sessionId, student: userId });
 
-        if (!isTutor && !hasBooking) {
+        if (!isTutor && !booking) {
             return res.status(403).json({ success: false, error: 'Access Denied: You must book this session first.' });
         }
 
@@ -367,7 +367,13 @@ exports.getSessionDetails = async (req, res) => {
             startTime: session.startTime,
             endTime: session.endTime,
             meetingLink: session.meetingLink || ('https://meet.jit.si/' + session._id),
-            password: session.password || ''
+            password: session.password || '',
+            status: session.status,
+            startedAt: session.startedAt,
+            endedAt: session.endedAt,
+            joinTime: booking ? booking.joinTime : null,
+            leaveTime: booking ? booking.leaveTime : null,
+            attendanceStatus: booking ? booking.attendanceStatus : null
         };
 
         return res.status(200).json({ success: true, data: sessionDetails });
@@ -375,3 +381,132 @@ exports.getSessionDetails = async (req, res) => {
         res.status(500).json({ success: false, error: error.message });
     }
 };
+
+// JOIN SESSION (Student joins the session)
+exports.joinSession = async (req, res) => {
+    try {
+        const booking = await Booking.findOne({ session: req.params.sessionId, student: req.user._id });
+
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found for this session' });
+        }
+
+        if (booking.joinTime) {
+            return res.status(200).json({ success: true, message: 'Re-joined session', data: booking });
+        }
+
+        booking.joinTime = new Date();
+        await booking.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Joined session successfully',
+            data: booking
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
+// LEAVE SESSION (Student leaves the session and attendance is calculated)
+exports.leaveSession = async (req, res) => {
+    try {
+        const booking = await Booking.findOne({ session: req.params.sessionId, student: req.user._id }).populate('session');
+
+        if (!booking) {
+            return res.status(404).json({ success: false, message: 'Booking not found' });
+        }
+
+        if (!booking.joinTime) {
+            return res.status(400).json({ success: false, message: 'You never joined this session' });
+        }
+
+        if (booking.leaveTime) {
+            return res.status(200).json({ success: true, message: 'Already left session', data: booking });
+        }
+
+        booking.leaveTime = new Date();
+        
+        // --- Calculate Attendance ---
+        const session = booking.session;
+        let sessionDurationMinutes = 0;
+
+        if (session.startTime && session.endTime) {
+            const [h1, m1] = session.startTime.split(':').map(Number);
+            const [h2, m2] = session.endTime.split(':').map(Number);
+            sessionDurationMinutes = (h2 * 60 + m2) - (h1 * 60 + m1);
+        } else {
+            // Fallback if session model doesn't have start/end times (unlikely here)
+            sessionDurationMinutes = 60; 
+        }
+
+        const studentStayDurationMs = booking.leaveTime - booking.joinTime;
+        const studentStayDurationMinutes = studentStayDurationMs / (1000 * 60);
+
+        const stayPercentage = (studentStayDurationMinutes / sessionDurationMinutes);
+
+        const student = await User.findById(req.user._id);
+
+        if (stayPercentage >= 0.70) {
+            booking.attendanceStatus = 'attended';
+            booking.attended = true;
+            student.attendedSessions += 1;
+        } else {
+            booking.attendanceStatus = 'missed';
+            booking.attended = false;
+            student.missedSessions += 1;
+        }
+
+        // Update Trust Score and Attendance %
+        student.trustScore = student.getTrustPercentage();
+        // Assuming there might be an attendancePercentage field, but if not we can just rely on the count.
+        // The user said "Attendance % updated", if there's no field we just rely on the dynamic calc.
+        // But let's check if User has that field. No, it calculates it dynamically.
+        
+        await student.save();
+        await booking.save();
+
+        // --- Low Attendance Alert System ---
+        const totalSessions = student.attendedSessions + student.missedSessions;
+        const finalAttendanceRate = totalSessions > 0 ? (student.attendedSessions / totalSessions) * 100 : 0;
+
+        if (totalSessions >= 3 && finalAttendanceRate < 50) {
+            // Notify Student
+            await Notification.create({
+                recipient: student._id,
+                title: 'Low Attendance Alert',
+                message: `Warning: Your attendance rate has dropped to ${finalAttendanceRate.toFixed(1)}%. Please attend more sessions to maintain your trust score.`,
+                type: 'urgent'
+            });
+
+            // Notify Admin(s)
+            const admins = await User.find({ role: 'Admin' });
+            for (const admin of admins) {
+                await Notification.create({
+                    recipient: admin._id,
+                    title: 'Student Low Attendance Warning',
+                    message: `Student ${student.firstName} ${student.lastName} (${student.email}) has a critically low attendance rate of ${finalAttendanceRate.toFixed(1)}%.`,
+                    type: 'alert'
+                });
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Left session. Attendance: ${booking.attendanceStatus}`,
+            data: {
+                booking,
+                stayPercentage: (stayPercentage * 100).toFixed(2) + '%'
+            }
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
