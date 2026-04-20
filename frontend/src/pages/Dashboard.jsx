@@ -23,7 +23,7 @@ return {
 const Dashboard = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
-    const [selectedTutorId, setSelectedTutorId] = useState('mock_tutor_456'); // Mock active tutor
+    const [selectedTutorId, setSelectedTutorId] = useState(null); // No mock active tutor
     const [availabilitySlots, setAvailabilitySlots] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedSessionToBook, setSelectedSessionToBook] = useState(null);
