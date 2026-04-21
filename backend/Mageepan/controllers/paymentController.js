@@ -82,3 +82,31 @@ exports.disputeTransaction = async (req, res) => {
 exports.getTransactionBySessionId = async (req, res) => {
     res.json({ success: true, transaction: null });
 };
+
+exports.mockRechargeWallet = async (req, res) => {
+    try {
+        const { userId, amount } = req.body;
+        
+        if (!userId || !amount) {
+            return res.status(400).json({ success: false, message: 'Missing user ID or amount' });
+        }
+
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { $inc: { walletBalance: parseFloat(amount) } },
+            { new: true }
+        );
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        res.json({ 
+            success: true, 
+            message: 'Wallet recharge successful', 
+            newBalance: user.walletBalance 
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};

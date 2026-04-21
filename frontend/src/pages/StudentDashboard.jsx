@@ -85,15 +85,18 @@ const StudentDashboard = () => {
     if (!amount || isNaN(amount)) return;
 
     try {
-      const { data } = await api.post('/stripe/create-recharge-session', {
+      const { data } = await api.post('/payments/mock-recharge', {
         userId: user._id,
         amount: parseFloat(amount)
       });
-      if (data.url) {
-        window.location.href = data.url;
+      
+      if (data.success) {
+        toast.success(`Wallet successfully recharged with Rs ${amount}!`);
+        fetchWalletBalance(); // Instantly update the dashboard balance
       }
     } catch (error) {
       toast.error('Failed to initiate recharge');
+      console.error(error);
     }
   };
 
