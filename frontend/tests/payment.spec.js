@@ -55,4 +55,20 @@ test.describe('Payment & Checkout Flow', () => {
         await expect(balanceText).toBeVisible();
     }
   });
+
+  test('User can navigate to payment failure/cancel page and see error message', async ({ page }) => {
+    // Navigate directly to the cancel page to simulate a payment cancellation flow from Stripe
+    await page.goto('/cancel');
+
+    // Asserts that the cancel page renders with the correct payment canceled message
+    const cancelTitle = page.getByRole('heading', { name: /Payment Canceled/i });
+    await expect(cancelTitle).toBeVisible();
+
+    const cancelDescription = page.getByText(/The payment process was canceled/i);
+    await expect(cancelDescription).toBeVisible();
+
+    // Verify there's a button to return
+    const returnButton = page.getByRole('button', { name: /Return/i });
+    await expect(returnButton).toBeVisible();
+  });
 });

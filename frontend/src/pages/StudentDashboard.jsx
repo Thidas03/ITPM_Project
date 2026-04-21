@@ -760,7 +760,7 @@ const StudentDashboard = () => {
                         )}
                         {sessionPhase === 'completed' && booking.status !== 'cancelled' && (
                           <button
-                            onClick={() => navigate('/feedback', { state: { sessionId: booking.session?._id || booking._id, tutorId: booking.tutor?._id || booking.tutor, studentId: user._id } })}
+                            onClick={() => navigate('/feedback', { state: { sessionId: booking.session?._id || booking._id, tutorName: booking.tutor?.name || (booking.tutor?.firstName ? `${booking.tutor.firstName} ${booking.tutor.lastName}` : 'Tutor'), studentId: user._id, studentName: user.name || (user.firstName ? `${user.firstName} ${user.lastName}` : 'Student') } })}
                             className="flex-1 md:flex-none px-4 py-2 rounded-xl border border-blue-500/50 text-blue-400 text-sm font-medium hover:bg-blue-500/10 transition-colors"
                           >
                             Give Feedback

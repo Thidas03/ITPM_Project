@@ -14,9 +14,9 @@ export const getAllFeedback = async () => {
   return response.data;
 };
 
-// Get anonymous feedback by tutor ID
-export const getFeedbackByTutor = async (tutorId) => {
-  const response = await api.get(`/feedback/tutor/${tutorId}`);
+// Get anonymous feedback by tutor Name
+export const getFeedbackByTutor = async (tutorName) => {
+  const response = await api.get(`/feedback/tutor/${tutorName}`);
   return response.data;
 };
 

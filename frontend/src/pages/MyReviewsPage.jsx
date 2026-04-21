@@ -2,17 +2,17 @@ import React, { useState } from "react";
 import { getFeedbackByTutor } from "../services/feedbackService";
 
 const MyReviewsPage = () => {
-  const [tutorId, setTutorId] = useState("");
+  const [tutorName, setTutorName] = useState("");
   const [reviews, setReviews] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
   const handleLoadMyReviews = async () => {
-    const trimmedTutorId = tutorId.trim();
+    const trimmedTutorName = tutorName.trim();
 
-    if (!trimmedTutorId) {
-      setError("Tutor ID is required");
+    if (!trimmedTutorName) {
+      setError("Tutor Name is required");
       setReviews([]);
       setSearched(false);
       return;
@@ -23,8 +23,8 @@ const MyReviewsPage = () => {
       setError("");
       setSearched(true);
 
-      const data = await getFeedbackByTutor(trimmedTutorId);
-      setReviews(data || []);
+      const response = await getFeedbackByTutor(trimmedTutorName);
+      setReviews(Array.isArray(response) ? response : (response?.data || []));
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load your reviews");
       setReviews([]);
@@ -34,7 +34,7 @@ const MyReviewsPage = () => {
   };
 
   const handleFillDemoTutor = () => {
-    setTutorId("TUT-450");
+    setTutorName("John Doe");
     setError("");
   };
 
@@ -55,9 +55,9 @@ const MyReviewsPage = () => {
           <div className="mt-6 flex flex-col gap-3 md:flex-row">
             <input
               type="text"
-              value={tutorId}
-              onChange={(e) => setTutorId(e.target.value)}
-              placeholder="Enter Your Tutor ID"
+              value={tutorName}
+              onChange={(e) => setTutorName(e.target.value)}
+              placeholder="Enter Your Tutor Name"
               className="flex-1 rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-gray-300 placeholder-gray-500 outline-none focus:border-teal-500"
             />
             <button
@@ -99,7 +99,7 @@ const MyReviewsPage = () => {
         <div className="grid gap-5">
           {!searched ? (
             <div className="rounded-2xl border border-gray-700 bg-gray-800 p-8 text-center text-gray-400 shadow-xl">
-              Enter your Tutor ID and click View My Reviews.
+              Enter your Tutor Name and click View My Reviews.
             </div>
           ) : loading ? (
             <div className="rounded-2xl border border-teal-500/20 bg-teal-500/10 p-8 text-center text-gray-300 shadow-xl">
@@ -107,7 +107,7 @@ const MyReviewsPage = () => {
             </div>
           ) : reviews.length === 0 ? (
             <div className="rounded-2xl border border-gray-700 bg-gray-800 p-8 text-center text-gray-400 shadow-xl">
-              No reviews found for this Tutor ID.
+              No reviews found for this Tutor Name.
             </div>
           ) : (
             reviews.map((review) => (

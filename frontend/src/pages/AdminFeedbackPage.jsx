@@ -191,7 +191,7 @@ const AdminFeedbackPage = () => {
                     </div>
                     <div className="p-3 rounded-xl bg-slate-800/50 border border-slate-800">
                       <p className="text-[10px] uppercase font-black text-slate-500 tracking-tighter mb-1">Tutor Target</p>
-                      <p className="text-sm font-bold text-slate-300 truncate">{item.tutorId}</p>
+                      <p className="text-sm font-bold text-slate-300 truncate">{item.tutorName || item.tutorId}</p>
                     </div>
                   </div>
                   

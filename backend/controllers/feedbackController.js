@@ -3,9 +3,9 @@ const Feedback = require("../models/Feedback");
 // Submit new feedback
 const createFeedback = async (req, res) => {
   try {
-    const { sessionId, studentId, tutorId, rating, comment, category } = req.body;
+    const { sessionId, studentId, tutorName, rating, comment, category } = req.body;
 
-    if (!sessionId || !studentId || !tutorId || !rating || !comment) {
+    if (!sessionId || !studentId || !tutorName || !rating || !comment) {
       return res.status(400).json({
         message: "All required fields must be filled",
       });
@@ -22,7 +22,7 @@ const createFeedback = async (req, res) => {
     const newFeedback = new Feedback({
       sessionId,
       studentId,
-      tutorId,
+      tutorName,
       rating,
       comment,
       category,
@@ -58,15 +58,20 @@ const getAllFeedback = async (req, res) => {
 // Tutor view: anonymous feedback only
 const getTutorFeedback = async (req, res) => {
   try {
-    const { tutorId } = req.params;
+    const { tutorName } = req.params;
 
-    if (!tutorId) {
+    if (!tutorName) {
       return res.status(400).json({
-        message: "Tutor ID is required",
+        message: "Tutor Name is required",
       });
     }
 
-    const feedbackList = await Feedback.find({ tutorId })
+    const feedbackList = await Feedback.find({ 
+      $or: [
+        { tutorName: { $regex: new RegExp(tutorName, "i") } },
+        { tutorId: tutorName }
+      ]
+    })
       .select("sessionId rating comment category createdAt status")
       .sort({ createdAt: -1 });
 

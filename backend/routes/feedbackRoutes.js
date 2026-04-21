@@ -17,7 +17,7 @@ router.post("/", createFeedback);
 router.get("/", protect, admin, getAllFeedback);
 
 // Tutor view (Protected for specific tutor or admin)
-router.get("/tutor/:tutorId", protect, getTutorFeedback);
+router.get("/tutor/:tutorName", protect, getTutorFeedback);
 
 // Update feedback status (Admin only)
 router.put("/:id", protect, admin, updateFeedbackStatus);

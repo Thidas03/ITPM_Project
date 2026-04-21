@@ -4,22 +4,22 @@ import React, { useState } from "react";
 import { getFeedbackByTutor } from "../services/feedbackService";
 
 const TutorReviewsPage = () => {
-  const [tutorId, setTutorId] = useState("");
+  const [tutorName, setTutorName] = useState("");
   const [reviews, setReviews] = useState([]);
   const [error, setError] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleFillDemoTutor = () => {
-    setTutorId("TUT-450");
+    setTutorName("John Doe");
     setError("");
   };
 
   const handleSearch = async () => {
-    const trimmedTutorId = tutorId.trim();
+    const trimmedTutorName = tutorName.trim();
 
-    if (!trimmedTutorId) {
-      setError("Tutor ID is required");
+    if (!trimmedTutorName) {
+      setError("Tutor Name is required");
       setReviews([]);
       setHasSearched(false);
       return;
@@ -30,8 +30,8 @@ const TutorReviewsPage = () => {
       setError("");
       setHasSearched(true);
 
-      const data = await getFeedbackByTutor(trimmedTutorId);
-      setReviews(data || []);
+      const response = await getFeedbackByTutor(trimmedTutorName);
+      setReviews(Array.isArray(response) ? response : (response?.data || []));
     } catch (err) {
       setError(err.response?.data?.message || "Failed to fetch tutor reviews");
       setReviews([]);
@@ -52,15 +52,15 @@ const TutorReviewsPage = () => {
         <div className="mb-8 rounded-2xl border border-gray-700 bg-gray-800 p-8 shadow-2xl">
           <h1 className="text-3xl font-bold text-gray-300">Tutor Reviews</h1>
           <p className="mt-2 text-gray-400">
-            Search anonymous reviews for a tutor using the tutor ID.
+            Search anonymous reviews for a tutor using the tutor name.
           </p>
 
           <div className="mt-6 flex flex-col gap-3 md:flex-row">
             <input
               type="text"
-              value={tutorId}
-              onChange={(e) => setTutorId(e.target.value)}
-              placeholder="Enter Tutor ID"
+              value={tutorName}
+              onChange={(e) => setTutorName(e.target.value)}
+              placeholder="Enter Tutor Name"
               className="flex-1 rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-gray-300 placeholder-gray-500 outline-none focus:border-teal-500"
             />
             <button
@@ -102,7 +102,7 @@ const TutorReviewsPage = () => {
         <div className="grid gap-5">
           {!hasSearched ? (
             <div className="rounded-2xl border border-gray-700 bg-gray-800 p-8 text-center text-gray-400 shadow-xl">
-              Enter a Tutor ID and click Search to view reviews.
+              Enter a Tutor Name and click Search to view reviews.
             </div>
           ) : loading ? (
             <div className="rounded-2xl border border-teal-500/20 bg-teal-500/10 p-8 text-center text-gray-300 shadow-xl">
@@ -110,7 +110,7 @@ const TutorReviewsPage = () => {
             </div>
           ) : reviews.length === 0 ? (
             <div className="rounded-2xl border border-gray-700 bg-gray-800 p-8 text-center text-gray-400 shadow-xl">
-              No reviews found for this Tutor ID.
+              No reviews found for this Tutor Name.
             </div>
           ) : (
             reviews.map((review) => (

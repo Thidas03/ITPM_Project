@@ -11,7 +11,8 @@ const FeedbackPage = () => {
   const [formData, setFormData] = useState({
     sessionId: initialData.sessionId || "",
     studentId: initialData.studentId || "",
-    tutorId: initialData.tutorId || "",
+    studentName: initialData.studentName || "",
+    tutorName: initialData.tutorName || "",
     rating: "",
     comment: "",
     category: "General",
@@ -26,7 +27,7 @@ const FeedbackPage = () => {
 
     if (!formData.sessionId.trim()) newErrors.sessionId = "Session ID is required";
     if (!formData.studentId.trim()) newErrors.studentId = "Student ID is required";
-    if (!formData.tutorId.trim()) newErrors.tutorId = "Tutor ID is required";
+    if (!formData.tutorName.trim()) newErrors.tutorName = "Tutor Name is required";
 
     if (!formData.rating) {
       newErrors.rating = "Rating is required";
@@ -54,9 +55,10 @@ const FeedbackPage = () => {
 
   const handleFillDemoData = () => {
     setFormData((prev) => ({
+      ...prev,
       sessionId: prev.sessionId || "SES-101",
       studentId: prev.studentId || "STU-2023001",
-      tutorId: prev.tutorId || "TUT-450",
+      tutorName: prev.tutorName || "John Doe",
       rating: "5",
       comment: "The tutor explained the lesson very clearly and was very helpful.",
       category: "Teaching Quality",
@@ -84,7 +86,7 @@ const FeedbackPage = () => {
       setFormData({
         sessionId: "",
         studentId: "",
-        tutorId: "",
+        tutorName: "",
         rating: "",
         comment: "",
         category: "General",
@@ -136,36 +138,39 @@ const FeedbackPage = () => {
               name="sessionId"
               value={formData.sessionId}
               onChange={handleChange}
+              readOnly={!!initialData.sessionId}
               placeholder="Enter session ID"
-              className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-gray-300 placeholder-gray-500 outline-none focus:border-teal-500"
+              className={`w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-gray-300 placeholder-gray-500 outline-none focus:border-teal-500 ${initialData.sessionId ? 'opacity-70 cursor-not-allowed' : ''}`}
             />
             {errors.sessionId && <p className="mt-1 text-sm text-red-400">{errors.sessionId}</p>}
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-300">Student ID</label>
+            <label className="mb-2 block text-sm font-medium text-gray-300">Student Name (ID: {formData.studentId})</label>
             <input
               type="text"
-              name="studentId"
-              value={formData.studentId}
+              name="studentName"
+              value={formData.studentName || formData.studentId}
               onChange={handleChange}
-              placeholder="Enter student ID"
-              className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-gray-300 placeholder-gray-500 outline-none focus:border-teal-500"
+              readOnly={!!initialData.studentId}
+              placeholder="Enter student info"
+              className={`w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-gray-300 placeholder-gray-500 outline-none focus:border-teal-500 ${initialData.studentId ? 'opacity-70 cursor-not-allowed' : ''}`}
             />
             {errors.studentId && <p className="mt-1 text-sm text-red-400">{errors.studentId}</p>}
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-300">Tutor ID</label>
+            <label className="mb-2 block text-sm font-medium text-gray-300">Tutor Name</label>
             <input
               type="text"
-              name="tutorId"
-              value={formData.tutorId}
+              name="tutorName"
+              value={formData.tutorName}
               onChange={handleChange}
-              placeholder="Enter tutor ID"
-              className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-gray-300 placeholder-gray-500 outline-none focus:border-teal-500"
+              readOnly={!!initialData.tutorName}
+              placeholder="Enter tutor name"
+              className={`w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-gray-300 placeholder-gray-500 outline-none focus:border-teal-500 ${initialData.tutorName ? 'opacity-70 cursor-not-allowed' : ''}`}
             />
-            {errors.tutorId && <p className="mt-1 text-sm text-red-400">{errors.tutorId}</p>}
+            {errors.tutorName && <p className="mt-1 text-sm text-red-400">{errors.tutorName}</p>}
           </div>
 
           <div>

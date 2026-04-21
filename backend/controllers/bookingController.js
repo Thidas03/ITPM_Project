@@ -70,7 +70,7 @@ exports.createBooking = async (req, res) => {
                 platformFee: amount * 0.2,
                 tutorEarnings: amount * 0.8,
                 tutorId: availability.tutor,
-                status: 'completed'
+                status: 'held_in_escrow'
             });
 
             try {
@@ -109,7 +109,7 @@ exports.createBooking = async (req, res) => {
                 platformFee: amount * 0.2,
                 tutorEarnings: amount * 0.8,
                 tutorId: sessionDoc.tutor,
-                status: 'completed'
+                status: 'held_in_escrow'
             });
 
             await Availability.findOneAndUpdate(
@@ -174,7 +174,7 @@ exports.createSessionBooking = async (req, res) => {
             platformFee: amount * 0.2,
             tutorEarnings: amount * 0.8,
             tutorId: session.tutor,
-            status: 'completed'
+            status: 'held_in_escrow'
         });
 
         session.currentParticipants += 1;

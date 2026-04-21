@@ -68,8 +68,9 @@ const TutorDashboard = () => {
 
   const fetchFeedbacks = async () => {
     try {
-      const data = await getFeedbackByTutor(user._id);
-      setFeedbacks(data);
+      const tutorName = user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.name || user._id;
+      const response = await getFeedbackByTutor(tutorName);
+      setFeedbacks(Array.isArray(response) ? response : (response?.data || []));
     } catch (error) {
       console.error('Failed to fetch tutor feedback', error);
     } finally {
