@@ -1,0 +1,141 @@
+import React, { useState } from 'react';
+import { Check, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import CheckoutModal from '../Mageepan/Checkout/CheckoutModal';
+import { useAuth } from '../context/AuthContext';
+
+const Pricing = () => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState(null);
+
+    const sessions = [
+        {
+            id: 'session_math_101',
+            name: 'Mathematics 101',
+            instructor: 'Dr. Smith',
+            price: '10',
+            priceId: 'price_math_placeholder',
+            features: [
+                'Basic Video Access',
+                'Live Q&A Participation',
+                'Session Recording (24h)',
+            ],
+            type: 'Foundation'
+        },
+        {
+            id: 'session_ai_intro',
+            name: 'Intro to AI',
+            instructor: 'Prof. J. Doe',
+            price: '25',
+            priceId: 'price_ai_placeholder',
+            features: [
+                'HD Video Access',
+                'Advanced AI Summarizer',
+                'Live Project Collaboration',
+                'Session Recording (Lifetime)',
+            ],
+            isPremium: true,
+            type: 'Advanced'
+        }
+    ];
+
+    const bundles = [
+        {
+            id: 'bundle_stem_pack',
+            name: 'STEM Mastery Bundle',
+            instructor: 'Multiple Tutors',
+            price: '40',
+            priceId: 'price_bundle_placeholder',
+            features: [
+                'All Math 101 Sessions',
+                'All Science 101 Sessions',
+                'Bonus: Downloadable Notes',
+                'Priority Support',
+            ],
+            isBundle: true
+        }
+    ];
+
+    const handleOpenCheckout = (item) => {
+        setSelectedItem(item);
+        setIsModalOpen(true);
+    };
+
+    return (
+        <div className="container">
+            <header className="pricing-header">
+                <h1>Book Your Next Session</h1>
+                <p>Pay only for the classes you want to attend.</p>
+                <div style={{ marginTop: '1rem' }}>
+                    <button className="btn btn-secondary" style={{ width: 'auto', padding: '0.5rem 1.5rem' }} onClick={() => window.location.href = '/dashboard'}>
+                        Go to My Dashboard
+                    </button>
+                </div>
+            </header>
+
+            <h2 style={{ marginBottom: '2rem', textAlign: 'center' }}>Single Sessions</h2>
+            <div className="pricing-grid" style={{ marginBottom: '4rem' }}>
+                {sessions.map((session, index) => (
+                    <div key={index} className={`pricing-card ${session.isPremium ? 'premium' : ''}`}>
+                        {session.isPremium && <div className="badge">Featured</div>}
+                        <h2 className="tier-name">{session.name}</h2>
+                        <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>{session.instructor}</p>
+                        <div className="price">Rs {session.price}<span>/session</span></div>
+
+                        <ul className="features-list">
+                            {session.features.map((feature, fIndex) => (
+                                <li key={fIndex} className="feature-item">
+                                    <Check size={20} className="text-success" color="#22c55e" />
+                                    {feature}
+                                </li>
+                            ))}
+                        </ul>
+
+                        <button
+                            className={`btn ${session.isPremium ? 'btn-primary' : 'btn-secondary'}`}
+                            onClick={() => handleOpenCheckout(session)}
+                        >
+                            Pay & Register
+                        </button>
+                    </div>
+                ))}
+            </div>
+
+            <h2 style={{ marginBottom: '2rem', textAlign: 'center' }}>Value Bundles</h2>
+            <div className="pricing-grid">
+                {bundles.map((bundle, index) => (
+                    <div key={index} className="pricing-card premium" style={{ border: '2px dashed var(--primary)' }}>
+                        <div className="badge">Save 30%</div>
+                        <h2 className="tier-name">{bundle.name}</h2>
+                        <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>{bundle.instructor}</p>
+                        <div className="price">Rs {bundle.price}<span>/bundle</span></div>
+
+                        <ul className="features-list">
+                            {bundle.features.map((feature, fIndex) => (
+                                <li key={fIndex} className="feature-item">
+                                    <Check size={20} className="text-success" color="#22c55e" />
+                                    {feature}
+                                </li>
+                            ))}
+                        </ul>
+
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => handleOpenCheckout(bundle)}
+                        >
+                            Buy Bundle
+                        </button>
+                    </div>
+                ))}
+            </div>
+
+            <CheckoutModal 
+                isOpen={isModalOpen} 
+                onClose={() => setIsModalOpen(false)} 
+                selectedItem={selectedItem} 
+            />
+        </div>
+    );
+};
+
+export default Pricing;
