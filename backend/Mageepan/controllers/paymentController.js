@@ -19,7 +19,32 @@ exports.payWithWallet = async (req, res) => {
 
 exports.processMockCardPayment = async (req, res) => {
     try {
-        // Mock successful payment
+        const { expiryDate } = req.body; 
+
+        if (expiryDate) {
+            const [monthStr, yearStr] = expiryDate.split('/');
+            
+            if (monthStr && yearStr) {
+                const expMonth = parseInt(monthStr, 10);
+                let expYear = parseInt(yearStr, 10);
+                
+                if (expYear < 100) {
+                    expYear += 2000;
+                }
+
+                const currentDate = new Date();
+                const currentYear = currentDate.getFullYear();
+                const currentMonth = currentDate.getMonth() + 1;
+
+                if (expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: "Payment Failed: The card's expiry date has passed." 
+                    });
+                }
+            }
+        }
+
         res.json({ success: true, message: 'Card payment successful' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

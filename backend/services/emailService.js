@@ -14,8 +14,9 @@ const transporter = nodemailer.createTransport({
  * Sends a session confirmation email to the student.
  * @param {string} to - Student's email address
  * @param {object} details - Session details (courseName, tutorName, password, price)
+ * @param {Buffer} [pdfBuffer] - Optional PDF receipt buffer to attach
  */
-async function sendSessionConfirmation(to, details) {
+async function sendSessionConfirmation(to, details, pdfBuffer) {
     const { courseName, tutorName, password, price } = details;
 
     const mailOptions = {
@@ -38,6 +39,7 @@ async function sendSessionConfirmation(to, details) {
                 <div style="margin: 20px 0;">
                     <h3>Receipt:</h3>
                     <p><strong>Amount Paid:</strong> $${price}</p>
+                    <p style="font-size: 14px; margin-top: 10px; color: #16a34a;"><strong>Note:</strong> A detailed PDF receipt is attached to this email for your records.</p>
                 </div>
 
                 <p>Please keep this email for your records. You can use the password above to join the class at the scheduled time.</p>
@@ -47,6 +49,16 @@ async function sendSessionConfirmation(to, details) {
             </div>
         `,
     };
+
+    if (pdfBuffer) {
+        mailOptions.attachments = [
+            {
+                filename: `StuEdu_Receipt_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
+                content: pdfBuffer,
+                contentType: 'application/pdf'
+            }
+        ];
+    }
 
     try {
         const info = await transporter.sendMail(mailOptions);
@@ -58,4 +70,28 @@ async function sendSessionConfirmation(to, details) {
     }
 }
 
-module.exports = { sendSessionConfirmation };
+/**
+ * Sends a generic notification email (e.g. for Cron Job reminders)
+ * @param {string} to - User's email address
+ * @param {string} title - Email subject
+ * @param {string} message - Email content
+ */
+async function sendNotificationEmail(to, title, message) {
+    const mailOptions = {
+        from: `"StuEdu Notifications" <${process.env.SMTP_USER}>`,
+        to: to,
+        subject: title,
+        text: message, // Can be converted to HTML later if needed
+    };
+
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Notification email sent: ' + info.response);
+        return info;
+    } catch (error) {
+        console.error('Error sending notification email:', error);
+        throw error;
+    }
+}
+
+module.exports = { sendSessionConfirmation, sendNotificationEmail };

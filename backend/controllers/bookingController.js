@@ -4,6 +4,8 @@ const Availability = require('../models/Availability');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const Transaction = require('../Mageepan/models/Transaction');
+const { generatePaymentReceiptPDF } = require('../utils/pdfGenerator');
+const { sendSessionConfirmation } = require('../services/emailService');
 
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -75,6 +77,7 @@ exports.createBooking = async (req, res) => {
 
             try {
                 const studentUser = await User.findById(studentId);
+                const tutorUser = await User.findById(availability.tutor);
                 const studentName = studentUser ? studentUser.firstName : 'Unknown';
                 await Notification.create({
                     recipient: availability.tutor,
@@ -82,7 +85,22 @@ exports.createBooking = async (req, res) => {
                     relatedBooking: booking._id,
                     type: 'booking'
                 });
-            } catch (notifErr) {}
+
+                // Generate and Send the PDF Email for the mock booking
+                if (studentUser && studentUser.email) {
+                    const details = {
+                        studentName: studentName,
+                        courseName: '1-on-1 Tutoring Session',
+                        tutorName: tutorUser ? `${tutorUser.firstName} ${tutorUser.lastName}` : 'Your Tutor',
+                        price: amount,
+                        password: 'STU_PASS_123'
+                    };
+                    const pdfBuffer = await generatePaymentReceiptPDF(details);
+                    await sendSessionConfirmation(studentUser.email, details, pdfBuffer);
+                }
+            } catch (notifErr) {
+                console.error("Failed to process mock notification or email:", notifErr);
+            }
 
             return res.status(201).json({ success: true, data: booking });
         } else {
@@ -119,6 +137,7 @@ exports.createBooking = async (req, res) => {
 
             try {
                 const studentUser = await User.findById(studentId);
+                const tutorUser = await User.findById(sessionDoc.tutor);
                 const studentName = studentUser ? studentUser.firstName : 'Unknown';
                 await Notification.create({
                     recipient: sessionDoc.tutor,
@@ -126,7 +145,22 @@ exports.createBooking = async (req, res) => {
                     relatedBooking: booking._id,
                     type: 'booking'
                 });
-            } catch (notifErr) {}
+
+                // Generate and Send the PDF Email for the mock booking
+                if (studentUser && studentUser.email) {
+                    const details = {
+                        studentName: studentName,
+                        courseName: sessionDoc.title || '1-on-1 Tutoring Session',
+                        tutorName: tutorUser ? `${tutorUser.firstName} ${tutorUser.lastName}` : 'Your Tutor',
+                        price: amount,
+                        password: sessionDoc.password || 'STU_PASS_123'
+                    };
+                    const pdfBuffer = await generatePaymentReceiptPDF(details);
+                    await sendSessionConfirmation(studentUser.email, details, pdfBuffer);
+                }
+            } catch (notifErr) {
+                console.error("Failed to process mock notification or email:", notifErr);
+            }
 
             return res.status(201).json({ success: true, booking });
         }
@@ -185,6 +219,7 @@ exports.createSessionBooking = async (req, res) => {
 
         try {
             const studentUser = await User.findById(studentId);
+            const tutorUser = await User.findById(session.tutor);
             const studentName = studentUser ? studentUser.firstName : 'Unknown';
             await Notification.create({
                 recipient: session.tutor,
@@ -192,7 +227,22 @@ exports.createSessionBooking = async (req, res) => {
                 relatedBooking: booking._id,
                 type: 'booking'
             });
-        } catch (notifErr) {}
+
+            // Generate and Send the PDF Email for the mock booking
+            if (studentUser && studentUser.email) {
+                const details = {
+                    studentName: studentName,
+                    courseName: session.title || 'Scheduled Tutoring Session',
+                    tutorName: tutorUser ? `${tutorUser.firstName} ${tutorUser.lastName}` : 'Your Tutor',
+                    price: amount,
+                    password: session.password || 'STU_PASS_123'
+                };
+                const pdfBuffer = await generatePaymentReceiptPDF(details);
+                await sendSessionConfirmation(studentUser.email, details, pdfBuffer);
+            }
+        } catch (notifErr) {
+            console.error("Failed to process mock notification or email:", notifErr);
+        }
 
         res.status(201).json({ success: true, data: booking });
     } catch (error) {

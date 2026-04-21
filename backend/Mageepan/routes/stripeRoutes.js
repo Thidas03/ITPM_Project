@@ -7,6 +7,7 @@ const Transaction = require('../models/Transaction');
 const Availability = require('../../models/Availability');
 const Discount = require('../models/Discount');
 const { sendSessionConfirmation } = require('../../services/emailService');
+const { generatePaymentReceiptPDF } = require('../../utils/pdfGenerator');
 
 // MOCK: In a real app, these would come from a Session/Class model in the database
 const SESSION_DATA = {
@@ -238,10 +239,19 @@ async function handleSessionPaymentSuccess(session) {
 
         await transaction.save();
 
-        await sendSessionConfirmation(user.email, {
+        const paymentDetails = {
             ...sessionInfo,
             price: amountTotal.toFixed(2),
-        });
+        };
+
+        let pdfBuffer = null;
+        try {
+            pdfBuffer = await generatePaymentReceiptPDF(paymentDetails);
+        } catch(pdfErr) {
+            console.error('Error generating PDF receipt:', pdfErr);
+        }
+
+        await sendSessionConfirmation(user.email, paymentDetails, pdfBuffer);
 
         console.log(`Escrow Transaction created for user ${userId}`);
     } catch (error) {

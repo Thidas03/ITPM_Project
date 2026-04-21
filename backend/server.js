@@ -26,7 +26,7 @@ app.use(morgan('dev'));
 app.use(express.json());
 
 // Routes imports
-// const stripeRoutes = require('./Mageepan/routes/stripeRoutes');
+const stripeRoutes = require('./Mageepan/routes/stripeRoutes');
 const paymentRoutes = require('./Mageepan/routes/paymentRoutes');
 // const quizRoutes = require('./Mageepan/routes/quizRoutes');
 const availabilityRoutes = require('./routes/availabilityRoutes');
@@ -41,7 +41,7 @@ const chatRoutes = require('./routes/chatRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 
 // Mount routers
-// app.use('/api/stripe', stripeRoutes);
+app.use('/api/stripe', stripeRoutes);
 app.use('/api/availability', availabilityRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/feedback', feedbackRoutes);

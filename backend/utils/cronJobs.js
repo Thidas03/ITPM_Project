@@ -3,6 +3,7 @@ const Booking = require('../models/Booking');
 const Session = require('../models/Session');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
+const { sendNotificationEmail } = require('../services/emailService');
 
 const sendNotification = async (user, booking, session, typeLabel) => {
     try {
@@ -26,10 +27,14 @@ const sendNotification = async (user, booking, session, typeLabel) => {
             });
         }
 
-        // 4. Email (Mock)
+        // 4. Email (Real)
         if (prefs.email) {
-            console.log(`[EMAIL SENDING TO ${user.email}]: ${title} - ${message}`);
-            // Logic for real email using nodemailer would go here
+            console.log(`[EMAIL SENDING TO ${user.email}]: ${title}`);
+            try {
+                await sendNotificationEmail(user.email, title, message);
+            } catch (err) {
+                console.error('Failed to send email inside CronJob:', err.message);
+            }
         }
 
         // 5. SMS (Mock)

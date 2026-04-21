@@ -117,7 +117,8 @@ const CheckoutModal = ({ isOpen, onClose, selectedItem, onSuccess }) => {
                         sessionId: selectedItem.id,
                         availabilityId: selectedItem.availabilityId,
                         amount: selectedItem.price,
-                        tutorId: selectedItem.instructorId
+                        tutorId: selectedItem.instructorId,
+                        expiryDate: formData.expiry
                     });
                     
                     if (data.success) {
