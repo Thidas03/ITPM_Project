@@ -95,9 +95,11 @@ const StudentDashboard = () => {
         fetchWalletBalance(); // Instantly update the dashboard balance
       }
     } catch (error) {
-      toast.error('Failed to initiate recharge');
+      const errorMsg = error.response?.data?.message || 'Failed to initiate recharge';
+      toast.error(errorMsg);
       console.error(error);
     }
+
   };
 
   const fetchTutors = async () => {
@@ -535,11 +537,12 @@ const StudentDashboard = () => {
                   Recharge Now
                 </button>
                 <Link 
-                  to="/my-sessions" 
+                  to="/payment-history" 
                   className="flex-1 md:flex-none px-8 py-3 bg-gray-800 text-gray-300 border border-gray-700 rounded-xl font-bold text-sm hover:bg-gray-700 transition uppercase tracking-widest text-center"
                 >
                   History
                 </Link>
+
             </div>
         </div>
 

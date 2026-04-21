@@ -29,7 +29,9 @@ import FeedbackPage from "./pages/FeedbackPage";
 import TutorReviewsPage from "./pages/TutorReviewsPage";
 import AdminFeedbackPage from "./pages/AdminFeedbackPage";
 import MyReviewsPage from "./pages/MyReviewsPage";
+import PaymentHistory from "./pages/PaymentHistory";
 import authBg from './assets/auth-bg.png';
+
 
 
 
@@ -130,6 +132,12 @@ function App() {
               <NotificationPreferences />
             </ProtectedRoute>
           } />
+          <Route path="/payment-history" element={
+            <ProtectedRoute>
+              <PaymentHistory />
+            </ProtectedRoute>
+          } />
+
           
           <Route path="/admin" element={
             <ProtectedRoute roles={['Admin']}>

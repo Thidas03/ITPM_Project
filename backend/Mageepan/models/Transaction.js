@@ -6,36 +6,36 @@ const transactionSchema = new mongoose.Schema({
         ref: 'User', 
         required: [true, 'Transaction must belong to a user'] 
     },
-    sessionId: { type: String, required: [true, 'Session ID is required'] },
-    stripeSessionId: { type: String }, // Optional if paying via wallet
+    transactionType: {
+        type: String,
+        enum: ['recharge', 'payment', 'payout', 'refund'],
+        default: 'payment'
+    },
+    description: {
+        type: String,
+        default: 'Session Payment'
+    },
+    sessionId: { type: String }, // Optional for recharges
+    stripeSessionId: { type: String }, 
     paymentMethod: { type: String, enum: ['stripe', 'wallet', 'card'], default: 'stripe' },
     amount: { 
         type: Number, 
         required: [true, 'Amount is required'],
         min: [0, 'Amount cannot be negative']
-    }, // Total amount paid in dollars/currency
-    platformFee: { 
-        type: Number, 
-        default: 0
-    },
-    platformCommission: {
-        type: Number,
-        default: 0
-    },
-    tutorEarnings: { 
-        type: Number, 
-        required: [true, 'Tutor earnings are required'],
-        min: [0, 'Earnings cannot be negative']
-    }, // e.g., 80%
-    tutorId: { type: String, required: [true, 'Tutor ID is required for commission tracking'] }, // ID of the tutor
+    }, 
+    platformFee: { type: Number, default: 0 },
+    platformCommission: { type: Number, default: 0 },
+    tutorEarnings: { type: Number, default: 0 }, 
+    tutorId: { type: String }, 
     status: { 
         type: String, 
-        enum: ['pending', 'held_in_escrow', 'released', 'disputed', 'refunded', 'failed'],
-        default: 'pending' 
+        enum: ['pending', 'held_in_escrow', 'released', 'disputed', 'refunded', 'failed', 'completed'],
+        default: 'completed' 
     },
-    releaseDate: { type: Date }, // When money is released to tutor
-    invoiceUrl: { type: String }, // Link to Stripe PDF invoice
+    releaseDate: { type: Date }, 
+    invoiceUrl: { type: String }, 
     createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Transaction', transactionSchema);
+module.exports = mongoose.models.Transaction || mongoose.model('Transaction', transactionSchema);
+

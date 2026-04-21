@@ -123,8 +123,10 @@ const CheckoutModal = ({ isOpen, onClose, selectedItem, onSuccess }) => {
                         availabilityId: selectedItem.availabilityId,
                         amount: selectedItem.price,
                         tutorId: selectedItem.instructorId,
-                        expiryDate: formData.expiry
+                        expiryDate: formData.expiry,
+                        description: `Session: ${selectedItem.name}`
                     });
+
                     
                     if (data.success) {
                         toast.success('Simulated Card Payment Successful!');
@@ -153,9 +155,11 @@ const CheckoutModal = ({ isOpen, onClose, selectedItem, onSuccess }) => {
                     userId: user._id,
                     sessionId: selectedItem.id,
                     availabilityId: selectedItem.availabilityId,
-                    amount: selectedItem.price,
-                    tutorId: selectedItem.instructorId
+                    amount: finalPrice,
+                    tutorId: selectedItem.instructorId,
+                    description: `Session: ${selectedItem.name} (Wallet)`
                 });
+
                 
                 if (data.success) {
                     toast.success(data.message || 'Session booked successfully!');
