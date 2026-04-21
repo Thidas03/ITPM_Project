@@ -24,15 +24,20 @@ const CheckoutModal = ({ isOpen, onClose, selectedItem, onSuccess }) => {
     const [discount, setDiscount] = useState(null);
 
     useEffect(() => {
-        if (isOpen && user && selectedItem?.instructorId) {
+        if (isOpen && user) {
             fetchWalletBalance();
-            fetchTutorDiscount();
+            
+            const tutorId = selectedItem?.instructorId || selectedItem?.originalSession?.tutor?._id || selectedItem?.originalSession?.tutor;
+            if (tutorId) {
+                fetchTutorDiscount(tutorId);
+            }
         }
     }, [isOpen, user, selectedItem]);
 
-    const fetchTutorDiscount = async () => {
+    const fetchTutorDiscount = async (resolvedTutorId) => {
+        if (!resolvedTutorId) return;
         try {
-            const { data } = await api.get(`/quizzes/discount?studentId=${user._id}&tutorId=${selectedItem.instructorId}`);
+            const { data } = await api.get(`/quizzes/discount?studentId=${user._id}&tutorId=${resolvedTutorId}`);
             if (data.success && data.data) {
                 setDiscount(data.data);
             } else {

@@ -38,7 +38,7 @@ async function sendSessionConfirmation(to, details, pdfBuffer) {
 
                 <div style="margin: 20px 0;">
                     <h3>Receipt:</h3>
-                    <p><strong>Amount Paid:</strong> $${price}</p>
+                    <p><strong>Amount Paid:</strong> Rs. ${price}</p>
                     <p style="font-size: 14px; margin-top: 10px; color: #16a34a;"><strong>Note:</strong> A detailed PDF receipt is attached to this email for your records.</p>
                 </div>
 
