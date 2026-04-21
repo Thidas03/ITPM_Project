@@ -205,9 +205,9 @@ async function handleSessionPaymentSuccess(session) {
         const availabilityId = session.metadata.availabilityId;
 
         // Register student in the Availability slot
-        await Availability.findByIdAndUpdate(availabilityId, {
+        const availability = await Availability.findByIdAndUpdate(availabilityId, {
             $addToSet: { enrolledStudents: userId }
-        });
+        }, {new: true});
 
         const sessionInfo = SESSION_DATA[sessionId] || {
             courseName: 'Peer Tutoring Session',
@@ -242,6 +242,9 @@ async function handleSessionPaymentSuccess(session) {
         const paymentDetails = {
             ...sessionInfo,
             price: amountTotal.toFixed(2),
+            studentName: user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'Student',
+            date: new Date().toDateString(),
+            time: availability ? `${availability.startTime} - ${availability.endTime}` : 'N/A'
         };
 
         let pdfBuffer = null;

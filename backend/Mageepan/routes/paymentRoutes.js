@@ -7,6 +7,7 @@ router.post('/pay-with-wallet', paymentController.payWithWallet);
 router.post('/mock-card-pay', paymentController.processMockCardPayment);
 router.post('/mock-recharge', paymentController.mockRechargeWallet);
 router.get('/balance/:userId', paymentController.getWalletBalance);
+router.get('/history/:userId', paymentController.getWalletHistory);
 router.post('/buy-slot', paymentController.buyExtraSlot);
 
 // Escrow Operations

@@ -56,6 +56,8 @@ const StudentDashboard = () => {
   const [trustProfile, setTrustProfile] = useState(null);
   const [walletBalance, setWalletBalance] = useState(0);
   const [unreadCountBySession, setUnreadCountBySession] = useState({});
+  const [isWalletHistoryModalOpen, setIsWalletHistoryModalOpen] = useState(false);
+  const [walletHistory, setWalletHistory] = useState([]);
 
   useEffect(() => {
     const fetchTrustProfile = async () => {
@@ -93,11 +95,29 @@ const StudentDashboard = () => {
       if (data.success) {
         toast.success(`Wallet successfully recharged with Rs ${amount}!`);
         fetchWalletBalance(); // Instantly update the dashboard balance
+        fetchWalletHistory(); // Update history if open
       }
     } catch (error) {
       toast.error('Failed to initiate recharge');
       console.error(error);
     }
+  };
+
+  const fetchWalletHistory = async () => {
+    try {
+      const { data } = await api.get(`/payments/history/${user._id}`);
+      if (data.success) {
+        setWalletHistory(data.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch wallet history', error);
+      toast.error('Failed to load wallet history');
+    }
+  };
+
+  const openWalletHistory = () => {
+    fetchWalletHistory();
+    setIsWalletHistoryModalOpen(true);
   };
 
   const fetchTutors = async () => {
@@ -534,12 +554,12 @@ const StudentDashboard = () => {
                 >
                   Recharge Now
                 </button>
-                <Link 
-                  to="/my-sessions" 
+                <button 
+                  onClick={openWalletHistory}
                   className="flex-1 md:flex-none px-8 py-3 bg-gray-800 text-gray-300 border border-gray-700 rounded-xl font-bold text-sm hover:bg-gray-700 transition uppercase tracking-widest text-center"
                 >
                   History
-                </Link>
+                </button>
             </div>
         </div>
 
@@ -798,16 +818,104 @@ const StudentDashboard = () => {
       />
 
       {/* Checkout Modal */}
-      <CheckoutModal
+      <CheckoutModal 
         isOpen={isCheckoutModalOpen}
         onClose={() => setIsCheckoutModalOpen(false)}
-        selectedItem={checkoutSessionData}
+        sessionData={checkoutSessionData}
+        studentId={user?._id}
         onSuccess={handleProcessCheckoutSuccess}
       />
 
+      {/* Wallet History Modal */}
+      {isWalletHistoryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-gray-800 border border-gray-700 rounded-3xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
+            <div className="p-6 border-b border-gray-700 flex justify-between items-center bg-gray-800/50 rounded-t-3xl">
+              <div>
+                <h3 className="text-2xl font-black text-white">Wallet History</h3>
+                <p className="text-sm text-gray-400 font-medium">Your recent transactions and credits.</p>
+              </div>
+              <button 
+                onClick={() => setIsWalletHistoryModalOpen(false)}
+                className="text-gray-400 hover:text-white text-2xl transition-colors"
+              >
+                &times;
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1">
+              {walletHistory.length === 0 ? (
+                <div className="text-center py-10 bg-gray-900/50 rounded-2xl border border-gray-700 border-dashed">
+                  <p className="text-gray-400 text-lg font-medium">No transactions found.</p>
+                  <p className="text-sm text-gray-500 mt-1">Recharge your wallet or pay for sessions to see history here.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {walletHistory.map(tx => (
+                    <div key={tx._id} className="p-4 bg-gray-900/50 rounded-2xl border border-gray-700 flex justify-between items-center hover:border-gray-600 transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold shadow-inner ${
+                          tx.status === 'held_in_escrow' ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30' :
+                          tx.status === 'pending' ? 'bg-blue-500/20 text-blue-500 border border-blue-500/30' :
+                          tx.status === 'failed' ? 'bg-red-500/20 text-red-500 border border-red-500/30' :
+                          'bg-green-500/20 text-green-500 border border-green-500/30'
+                        }`}>
+                          {tx.status === 'held_in_escrow' ? '⏳' :
+                           tx.status === 'pending' ? '🔄' :
+                           tx.status === 'failed' ? '❌' : '✅'}
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-200">
+                            {tx.status === 'held_in_escrow' ? 'Session Payment (Escrow)' : 
+                             tx.status === 'released' ? 'Session Payment (Released)' : 
+                             'Wallet Transaction'}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-gray-400">
+                              {new Date(tx.createdAt).toLocaleDateString()} at {new Date(tx.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </span>
+                            <span className="text-gray-600">|</span>
+                            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                              tx.status === 'held_in_escrow' ? 'bg-amber-500/10 text-amber-400' :
+                              tx.status === 'pending' ? 'bg-blue-500/10 text-blue-400' :
+                              tx.status === 'failed' ? 'bg-red-500/10 text-red-400' :
+                              'bg-green-500/10 text-green-400'
+                            }`}>
+                              {tx.status.replace(/_/g, ' ')}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-lg font-black ${
+                          tx.status === 'held_in_escrow' ? 'text-amber-400' : 
+                          'text-white'
+                        }`}>
+                          - Rs {tx.amount.toFixed(2)}
+                        </p>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">
+                          via {tx.paymentMethod}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="p-6 border-t border-gray-700 bg-gray-900/50 text-right rounded-b-3xl">
+              <button 
+                onClick={() => setIsWalletHistoryModalOpen(false)}
+                className="px-8 py-2.5 bg-gray-800 text-white font-bold rounded-xl text-sm uppercase tracking-widest hover:bg-gray-700 border border-gray-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default StudentDashboard;
-

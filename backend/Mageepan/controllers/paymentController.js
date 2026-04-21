@@ -1,4 +1,5 @@
 const User = require('../../models/User');
+const Transaction = require('../models/Transaction');
 
 exports.payWithWallet = async (req, res) => {
     try {
@@ -57,7 +58,19 @@ exports.getWalletBalance = async (req, res) => {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-        res.json({ success: true, balance: user.walletBalance || 0, pending: 0 });
+        res.json({ success: true, balance: user.walletBalance || 0, pending: user.pendingBalance || 0 });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.getWalletHistory = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const transactions = await Transaction.find({ 
+            $or: [{ userId: userId }, { tutorId: userId }] 
+        }).sort({ createdAt: -1 });
+        res.json({ success: true, data: transactions });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -72,7 +85,29 @@ exports.buyExtraSlot = async (req, res) => {
 };
 
 exports.releaseFunds = async (req, res) => {
-    res.json({ success: true });
+    try {
+        const { transactionId } = req.params;
+        const transaction = await Transaction.findById(transactionId);
+        
+        if (!transaction) return res.status(404).json({ success: false, message: 'Transaction not found' });
+        if (transaction.status === 'released') return res.status(400).json({ success: false, message: 'Funds already released' });
+
+        transaction.status = 'released';
+        transaction.releaseDate = new Date();
+        await transaction.save();
+
+        const tutor = await User.findById(transaction.tutorId);
+        if (tutor) {
+            // Move from pending to wallet
+            tutor.pendingBalance = Math.max(0, (tutor.pendingBalance || 0) - transaction.tutorEarnings);
+            tutor.walletBalance = (tutor.walletBalance || 0) + transaction.tutorEarnings;
+            await tutor.save();
+        }
+
+        res.json({ success: true, message: 'Funds released to tutor' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 };
 
 exports.disputeTransaction = async (req, res) => {
@@ -80,7 +115,14 @@ exports.disputeTransaction = async (req, res) => {
 };
 
 exports.getTransactionBySessionId = async (req, res) => {
-    res.json({ success: true, transaction: null });
+    try {
+        const { sessionId } = req.params;
+        // Search by sessionId string (since in Booking it's an objectId string)
+        const transaction = await Transaction.findOne({ sessionId: sessionId });
+        res.json({ success: true, transaction });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 };
 
 exports.mockRechargeWallet = async (req, res) => {

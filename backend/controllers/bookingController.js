@@ -75,6 +75,9 @@ exports.createBooking = async (req, res) => {
                 status: 'held_in_escrow'
             });
 
+            // Increase Tutor's Pending Balance
+            await User.findByIdAndUpdate(availability.tutor, { $inc: { pendingBalance: amount * 0.8 } });
+
             try {
                 const studentUser = await User.findById(studentId);
                 const tutorUser = await User.findById(availability.tutor);
@@ -93,7 +96,9 @@ exports.createBooking = async (req, res) => {
                         courseName: '1-on-1 Tutoring Session',
                         tutorName: tutorUser ? `${tutorUser.firstName} ${tutorUser.lastName}` : 'Your Tutor',
                         price: amount,
-                        password: 'STU_PASS_123'
+                        password: 'STU_PASS_123',
+                        date: bookingDay.toDateString(),
+                        time: `${availability.startTime} - ${availability.endTime}`
                     };
                     const pdfBuffer = await generatePaymentReceiptPDF(details);
                     await sendSessionConfirmation(studentUser.email, details, pdfBuffer);
@@ -130,6 +135,9 @@ exports.createBooking = async (req, res) => {
                 status: 'held_in_escrow'
             });
 
+            // Increase Tutor's Pending Balance
+            await User.findByIdAndUpdate(sessionDoc.tutor, { $inc: { pendingBalance: amount * 0.8 } });
+
             await Availability.findOneAndUpdate(
                 { _id: session },
                 { $addToSet: { enrolledStudents: studentId } }
@@ -153,7 +161,9 @@ exports.createBooking = async (req, res) => {
                         courseName: sessionDoc.title || '1-on-1 Tutoring Session',
                         tutorName: tutorUser ? `${tutorUser.firstName} ${tutorUser.lastName}` : 'Your Tutor',
                         price: amount,
-                        password: sessionDoc.password || 'STU_PASS_123'
+                        password: sessionDoc.password || 'STU_PASS_123',
+                        date: sessionDoc.date ? new Date(sessionDoc.date).toDateString() : 'N/A',
+                        time: sessionDoc.startTime ? `${sessionDoc.startTime} - ${sessionDoc.endTime}` : 'N/A'
                     };
                     const pdfBuffer = await generatePaymentReceiptPDF(details);
                     await sendSessionConfirmation(studentUser.email, details, pdfBuffer);
@@ -211,6 +221,9 @@ exports.createSessionBooking = async (req, res) => {
             status: 'held_in_escrow'
         });
 
+        // Increase Tutor's Pending Balance
+        await User.findByIdAndUpdate(session.tutor, { $inc: { pendingBalance: amount * 0.8 } });
+
         session.currentParticipants += 1;
         if (session.currentParticipants >= session.maxParticipants) {
             session.status = 'booked';
@@ -235,7 +248,9 @@ exports.createSessionBooking = async (req, res) => {
                     courseName: session.title || 'Scheduled Tutoring Session',
                     tutorName: tutorUser ? `${tutorUser.firstName} ${tutorUser.lastName}` : 'Your Tutor',
                     price: amount,
-                    password: session.password || 'STU_PASS_123'
+                    password: session.password || 'STU_PASS_123',
+                    date: sessionDay.toDateString(),
+                    time: session.startTime ? `${session.startTime} - ${session.endTime}` : 'N/A'
                 };
                 const pdfBuffer = await generatePaymentReceiptPDF(details);
                 await sendSessionConfirmation(studentUser.email, details, pdfBuffer);
