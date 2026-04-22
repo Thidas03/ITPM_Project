@@ -338,17 +338,59 @@ exports.cancelBooking = async (req, res) => {
                 studentUser.cancellations = (studentUser.cancellations || 0) + 1;
                 await studentUser.save();
             }
+
+            // --- REFUND LOGIC START ---
+            // Find the most recent payment transaction for this student and session
+            const originalTransaction = await Transaction.findOne({
+                userId: req.user._id,
+                sessionId: booking.session || booking.availability,
+                transactionType: 'payment',
+                status: 'completed'
+            }).sort({ createdAt: -1 });
+
+            if (originalTransaction) {
+                const refundAmount = originalTransaction.amount;
+                const tutorDeduction = originalTransaction.tutorEarnings || (refundAmount * 0.9);
+
+                // 1. Credit Student Wallet
+                await User.findByIdAndUpdate(req.user._id, {
+                    $inc: { walletBalance: refundAmount }
+                });
+
+                // 2. Deduct from Tutor Wallet
+                if (booking.tutor) {
+                    await User.findByIdAndUpdate(booking.tutor, {
+                        $inc: { walletBalance: -tutorDeduction }
+                    });
+                }
+
+                // 3. Log Refund Transaction
+                await Transaction.create({
+                    userId: req.user._id,
+                    amount: refundAmount,
+                    transactionType: 'refund',
+                    description: `Refund for cancelled booking (${booking._id})`,
+                    paymentMethod: 'wallet',
+                    status: 'completed'
+                });
+
+                console.log(`Refund of Rs. ${refundAmount} processed for student ${req.user._id}`);
+            }
+            // --- REFUND LOGIC END ---
+
             const studentName = studentUser ? studentUser.firstName : 'Unknown';
             const bookingDateStr = booking.bookingDate ? new Date(booking.bookingDate).toDateString() : 'a session';
             await Notification.create({
                 recipient: booking.tutor,
-                message: `${studentName} has cancelled their booking for ${bookingDateStr}.`,
+                message: `${studentName} has cancelled their booking for ${bookingDateStr}. A refund has been issued.`,
                 relatedBooking: booking._id,
                 type: 'system'
             });
-        } catch (notifErr) {}
+        } catch (notifErr) {
+            console.error('Error during refund/notification:', notifErr);
+        }
 
-        res.status(200).json({ success: true, message: 'Booking cancelled successfully', data: booking });
+        res.status(200).json({ success: true, message: 'Booking cancelled and refund processed', data: booking });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

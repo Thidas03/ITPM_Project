@@ -296,9 +296,10 @@ const StudentDashboard = () => {
     if (!cancelBookingId) return;
     try {
       await cancelBooking(cancelBookingId);
-      toast.success('Booking cancelled successfully');
+      toast.success('Booking cancelled and amount refunded to wallet');
       fetchAvailableSlots();
       fetchStudentBookings();
+      fetchWalletBalance(); // Refresh balance to show refund
     } catch (error) {
       toast.error('Failed to cancel booking');
       console.error('Failed to cancel booking', error);

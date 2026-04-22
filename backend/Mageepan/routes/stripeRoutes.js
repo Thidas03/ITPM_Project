@@ -224,7 +224,7 @@ async function handleSessionPaymentSuccess(session) {
             await Discount.findByIdAndUpdate(session.metadata.discountId, { isUsed: true });
         }
 
-        // Save Transaction as HELD_IN_ESCROW
+        // Save Transaction as COMPLETED and credit Tutor
         const transaction = new Transaction({
             userId: userId,
             sessionId: sessionId,
@@ -233,11 +233,19 @@ async function handleSessionPaymentSuccess(session) {
             amount: amountTotal,
             platformCommission,
             tutorEarnings: tutorEarnings,
-            tutorId: sessionInfo.tutorId,
-            status: 'held_in_escrow'
+            tutorId: availability ? availability.tutor : sessionInfo.tutorId,
+            status: 'completed' // Money is now live in the tutor's wallet
         });
 
         await transaction.save();
+
+        // Credit the Tutor's wallet balance
+        if (availability && availability.tutor) {
+            await User.findByIdAndUpdate(availability.tutor, {
+                $inc: { walletBalance: tutorEarnings }
+            });
+            console.log(`Tutor ${availability.tutor} credited with Rs ${tutorEarnings} (90% of Rs ${amountTotal})`);
+        }
 
         const paymentDetails = {
             ...sessionInfo,
@@ -256,7 +264,7 @@ async function handleSessionPaymentSuccess(session) {
 
         await sendSessionConfirmation(user.email, paymentDetails, pdfBuffer);
 
-        console.log(`Escrow Transaction created for user ${userId}`);
+        console.log(`Payment confirmed and tutor credited for user ${userId}`);
     } catch (error) {
         console.error(`Error handling session payment:`, error);
     }

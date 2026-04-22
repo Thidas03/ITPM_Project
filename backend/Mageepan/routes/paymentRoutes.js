@@ -15,6 +15,7 @@ router.post('/buy-slot', paymentController.buyExtraSlot);
 router.patch('/release/:transactionId', paymentController.releaseFunds);
 router.patch('/dispute/:transactionId', paymentController.disputeTransaction);
 router.get('/session-transaction/:sessionId', paymentController.getTransactionBySessionId);
+router.post('/request-payout', paymentController.requestPayout);
 
 
 module.exports = router;

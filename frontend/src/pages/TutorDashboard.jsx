@@ -7,6 +7,7 @@ import { getNotifications, markAllAsRead } from '../features/notifications/servi
 import { useAuth } from '../context/AuthContext';
 import { getFeedbackByTutor } from '../services/feedbackService';
 import api from '../services/api';
+import { toast } from 'react-toastify';
 
 const TutorDashboard = () => {
   const { user } = useAuth();
@@ -22,6 +23,7 @@ const TutorDashboard = () => {
   const [selectedSessionId, setSelectedSessionId] = useState(null);
   const [attendanceReport, setAttendanceReport] = useState(null);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [payoutLoading, setPayoutLoading] = useState(false);
 
 
 
@@ -84,6 +86,34 @@ const TutorDashboard = () => {
       setNotifications(data.data || []);
     } catch (error) {
       console.error('Failed to fetch notifications', error);
+    }
+  };
+
+  const handleRequestPayout = async () => {
+    if (wallet.balance <= 0) {
+      return toast.warning('No earnings available for payout');
+    }
+
+    if (!window.confirm(`Request payout for Rs. ${wallet.balance.toFixed(2)}?`)) {
+      return;
+    }
+
+    setPayoutLoading(true);
+    try {
+      const response = await api.post('/payments/request-payout', {
+        userId: user._id
+      });
+
+      if (response.data.success) {
+        toast.success(`Payout of Rs. ${response.data.amount} requested successfully!`);
+        // Update local state to 0 immediately
+        setWallet(prev => ({ ...prev, balance: 0 }));
+      }
+    } catch (error) {
+      console.error('Payout failed', error);
+      toast.error(error.response?.data?.message || 'Payout request failed');
+    } finally {
+      setPayoutLoading(false);
     }
   };
 
@@ -278,7 +308,17 @@ const TutorDashboard = () => {
                 <h3 className="text-5xl font-black text-white mb-2 tracking-tighter">Rs {wallet.balance.toFixed(2)}</h3>
                 <p className="text-gray-400 text-sm font-medium">Net Earnings from completed & confirmed sessions.</p>
                 <div className="mt-6 flex gap-3">
-                    <button className="px-6 py-2 bg-teal-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-teal-400 transition shadow-lg shadow-teal-500/20">Request Payout</button>
+                    <button 
+                        onClick={handleRequestPayout}
+                        disabled={payoutLoading || wallet.balance <= 0}
+                        className={`px-6 py-2 rounded-xl font-bold text-xs uppercase tracking-widest transition shadow-lg outline-none ${
+                            payoutLoading || wallet.balance <= 0 
+                            ? 'bg-gray-700 text-gray-500 cursor-not-allowed border border-gray-600' 
+                            : 'bg-teal-500 text-white hover:bg-teal-400 shadow-teal-500/20'
+                        }`}
+                    >
+                        {payoutLoading ? 'Processing...' : 'Request Payout'}
+                    </button>
                     <button className="px-6 py-2 bg-gray-800 text-gray-300 border border-gray-700 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-gray-700 transition">History</button>
                 </div>
             </div>

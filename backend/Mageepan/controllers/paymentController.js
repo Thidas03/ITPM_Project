@@ -1,34 +1,64 @@
 const User = require('../../models/User');
 const Transaction = require('../models/Transaction');
+const { sendPayoutConfirmation } = require('../../services/emailService');
 
 
 
 exports.payWithWallet = async (req, res) => {
     try {
-        const { userId, amount, description, sessionId } = req.body;
+        const { userId, amount, description, sessionId, availabilityId } = req.body;
         const user = await User.findById(userId);
         
         if (!user) return res.status(404).json({ success: false, message: 'User not found' });
         if (user.walletBalance < amount) return res.status(400).json({ success: false, message: 'Insufficient balance' });
 
+        // Deduct from student
         user.walletBalance -= amount;
         await user.save();
 
-        // Create transaction record
+        const platformCommission = amount * 0.1;
+        const tutorEarnings = amount * 0.9;
+
+        let finalTutorId = req.body.tutorId || 'N/A';
+        
+        // Try to get tutor from Availability
+        const Availability = require('../../models/Availability');
+        if (availabilityId) {
+            const availability = await Availability.findById(availabilityId);
+            if (availability) {
+                finalTutorId = availability.tutor;
+                
+                // Also add student to availability
+                availability.enrolledStudents.push(userId);
+                await availability.save();
+            }
+        }
+
+        // Create transaction record for student
         await Transaction.create({
             userId,
-            amount: amount, // Positive amount
+            amount: amount,
             transactionType: 'payment',
             description: description || 'Session Booking (Wallet)',
             sessionId: sessionId || 'N/A',
-            tutorId: tutorId || 'N/A',
+            tutorId: finalTutorId,
             paymentMethod: 'wallet',
+            platformCommission,
+            tutorEarnings,
             status: 'completed'
         });
 
+        // Credit the Tutor
+        if (finalTutorId !== 'N/A') {
+            await User.findByIdAndUpdate(finalTutorId, {
+                $inc: { walletBalance: tutorEarnings }
+            });
+            console.log(`Tutor ${finalTutorId} credited with Rs ${tutorEarnings} from Wallet Payment`);
+        }
 
-        res.json({ success: true, message: 'Paid with wallet' });
+        res.json({ success: true, message: 'Paid with wallet, tutor credited' });
     } catch (error) {
+        console.error('Wallet Payment Error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -36,7 +66,7 @@ exports.payWithWallet = async (req, res) => {
 
 exports.processMockCardPayment = async (req, res) => {
     try {
-        const { expiryDate } = req.body; 
+        const { expiryDate, userId, amount, description, sessionId, availabilityId } = req.body; 
 
         if (expiryDate) {
             const [monthStr, yearStr] = expiryDate.split('/');
@@ -62,9 +92,23 @@ exports.processMockCardPayment = async (req, res) => {
             }
         }
 
-        res.json({ success: true, message: 'Card payment successful' });
-        
-        const { userId, amount, description, sessionId } = req.body;
+        const platformCommission = parseFloat(amount) * 0.1;
+        const tutorEarnings = parseFloat(amount) * 0.9;
+        let finalTutorId = req.body.tutorId || 'N/A';
+
+        // Try to get tutor from Availability
+        const Availability = require('../../models/Availability');
+        if (availabilityId) {
+            const availability = await Availability.findById(availabilityId);
+            if (availability) {
+                finalTutorId = availability.tutor;
+                
+                // Also add student to availability
+                availability.enrolledStudents.push(userId);
+                await availability.save();
+            }
+        }
+
         if (userId && amount) {
             await Transaction.create({
                 userId,
@@ -72,13 +116,26 @@ exports.processMockCardPayment = async (req, res) => {
                 transactionType: 'payment',
                 description: description || 'Session Booking (Card)',
                 sessionId: sessionId || 'N/A',
-                tutorId: tutorId || 'N/A',
+                tutorId: finalTutorId,
                 paymentMethod: 'card',
+                platformCommission,
+                tutorEarnings,
                 status: 'completed'
             });
+
+            // Credit the Tutor
+            if (finalTutorId !== 'N/A' && finalTutorId) {
+                await User.findByIdAndUpdate(finalTutorId, {
+                    $inc: { walletBalance: tutorEarnings }
+                });
+                console.log(`Tutor ${finalTutorId} credited with Rs ${tutorEarnings} from Mock Card Payment`);
+            }
         }
 
+        res.json({ success: true, message: 'Card payment successful, tutor credited' });
+
     } catch (error) {
+        console.error('Mock Card Payment Error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -163,6 +220,68 @@ exports.getTransactions = async (req, res) => {
         res.json({ success: true, transactions });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+
+exports.requestPayout = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        
+        if (!userId) {
+            return res.status(400).json({ success: false, message: 'User ID is required' });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        const amountRequested = user.walletBalance || 0;
+
+        if (amountRequested <= 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'No earnings available for payout' 
+            });
+        }
+
+        // Reset balance to 0
+        user.walletBalance = 0;
+        await user.save();
+
+        // Create transaction record
+        const transaction = await Transaction.create({
+            userId: user._id,
+            amount: amountRequested,
+            transactionType: 'payout',
+            description: 'Earning Payout Request',
+            paymentMethod: 'wallet', // Recorded as wallet deduction
+            status: 'completed' // Mocked as completed as requested
+        });
+
+        // Send email confirmation
+        try {
+            await sendPayoutConfirmation(user.email, {
+                amount: amountRequested,
+                transactionId: transaction._id,
+                date: new Date().toLocaleDateString('en-GB')
+            });
+        } catch (emailErr) {
+            console.error('Failed to send payout email:', emailErr);
+            // We don't fail the request if email fails, but it's logged
+        }
+
+        res.json({ 
+            success: true, 
+            message: 'Payout request processed and email sent', 
+            amount: amountRequested,
+            transactionId: transaction._id
+        });
+
+    } catch (error) {
+        console.error('Payout Request Error:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
 

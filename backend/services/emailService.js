@@ -94,4 +94,49 @@ async function sendNotificationEmail(to, title, message) {
     }
 }
 
-module.exports = { sendSessionConfirmation, sendNotificationEmail };
+/**
+ * Sends a payout confirmation email to the tutor.
+ * @param {string} to - Tutor's email address
+ * @param {object} details - Payout details (amount, transactionId, date)
+ */
+async function sendPayoutConfirmation(to, details) {
+    const { amount, transactionId, date } = details;
+
+    const mailOptions = {
+        from: `"StuEdu Finance" <${process.env.SMTP_USER}>`,
+        to: to,
+        subject: `Payout Successful: Rs. ${amount} transferred`,
+        html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+                <h2 style="color: #6366f1;">Payout Request Successful!</h2>
+                <p>Hi there,</p>
+                <p>Your request to withdraw your earnings has been processed successfully.</p>
+                
+                <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="margin-top: 0;">Payout Details:</h3>
+                    <p><strong>Amount:</strong> Rs. ${amount}</p>
+                    <p><strong>Transaction ID:</strong> <span style="font-family: monospace; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">${transactionId}</span></p>
+                    <p><strong>Date:</strong> ${date}</p>
+                    <p><strong>Status:</strong> <span style="color: #16a34a; font-weight: bold;">Completed</span></p>
+                </div>
+
+                <p>The funds will be reflected in your account as per your banking provider's processing times.</p>
+                
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 12px; color: #94a3b8;">If you didn't request this payout, please contact our security team immediately.</p>
+                <p style="font-size: 12px; color: #94a3b8;">&copy; 2026 STUEDU Smart Campus Tutoring Platform</p>
+            </div>
+        `,
+    };
+
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Payout email sent: ' + info.response);
+        return info;
+    } catch (error) {
+        console.error('Error sending payout email:', error);
+        throw error;
+    }
+}
+
+module.exports = { sendSessionConfirmation, sendNotificationEmail, sendPayoutConfirmation };
